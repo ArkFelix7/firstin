@@ -15,6 +15,8 @@ export interface BuildingFacts {
   vexcelCaptured: string | null;
   vexcelGsd: number | null;
   aerialUrl: string | null;
+  /** Agent-drawn access plan (ladder walls, staging, entries), when the building was analysed. */
+  accessUrl: string | null;
   matterportCreated: string | null;
   matterportModels: number | null;
   matterportSweeps: number | null;
@@ -41,10 +43,14 @@ const num = (x: unknown) => (typeof x === "number" && isFinite(x) ? x : null);
 export async function getBuildingFacts(b: Building): Promise<BuildingFacts | null> {
   if ((await getMode()) === "mock") return null;
   const id = encodeURIComponent(b.building_id);
-  const [costar, ortho, mp] = await Promise.all([
+  const accessPath = `/static/cache/vexcel/${id}/access_annotated.jpg`;
+  const [costar, ortho, mp, accessOk] = await Promise.all([
     getJson<Record<string, unknown>>(`/static/cache/costar/${id}.json`),
     getJson<Record<string, unknown>>(`/static/cache/vexcel/${id}/ortho.json`),
     getJson<{ models?: Array<Record<string, unknown>> }>(`/static/cache/matterport/${id}/model.json`),
+    fetch(`${apiBase()}${accessPath}`, { method: "HEAD", cache: "no-store", signal: AbortSignal.timeout(3000) })
+      .then((r) => r.ok)
+      .catch(() => false),
   ]);
   const p = (costar?.property ?? {}) as Record<string, unknown>;
   const events = Array.isArray(p.constructionEvents) ? (p.constructionEvents as Array<{ eventType?: number; year?: number }>) : [];
@@ -60,6 +66,7 @@ export async function getBuildingFacts(b: Building): Promise<BuildingFacts | nul
     vexcelCaptured: typeof ortho?.captured_at === "string" ? ortho.captured_at : null,
     vexcelGsd: num(ortho?.gsd_m),
     aerialUrl: assetUrl(ortho?.preview_url ?? ortho?.image_url),
+    accessUrl: accessOk ? assetUrl(accessPath) : null,
     matterportCreated: created[0] ?? null,
     matterportModels: models.length || null,
     matterportSweeps: models.reduce((n, m) => n + (num(m.sweep_count) ?? 0), 0) || null,

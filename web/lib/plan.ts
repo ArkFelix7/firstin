@@ -100,6 +100,7 @@ export function humanize(key: string): string {
     sprinkler_riser: "Sprinkler riser",
     knox_box: "Knox box",
     owner: "Owner",
+    entries_summary: "Entries and exits",
   };
   if (special[key]) return special[key];
   const s = key.replace(/_/g, " ");

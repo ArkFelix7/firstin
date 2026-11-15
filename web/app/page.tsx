@@ -380,6 +380,15 @@ function DetailPanel({
           </figure>
         )}
 
+        {f?.accessUrl && (
+          <figure className="mt-3">
+            <div className="mb-1 text-xs font-medium text-fg-2">Access plan</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={f.accessUrl} alt={`Access plan for ${b.address}`} className="aspect-[16/10] w-full rounded border border-line object-cover" />
+            <figcaption className="mt-1 text-2xs text-fg-3">Ladder access walls, staging and entries from the last analysis</figcaption>
+          </figure>
+        )}
+
         <div className="mt-3 border-t border-line">
           <KV
             labelWidth={116}

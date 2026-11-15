@@ -32,6 +32,12 @@ STEPS = {
                      "On approval FirstIn records who approved and when, renders a one-page PDF and a short voice brief, and publishes to the unit."),
     "10-incab": ("In-cab display",
                  "Engine 12's screen shows the approved plan: top hazards, stairs and roof access. Brief me plays the voice brief en route."),
+    "11-access-plan": ("Access plan",
+                       "Ladder-access walls in green, the staging area in blue and numbered entries, drawn on the Vexcel context tile at full resolution. Selecting a wall shows its reason and confidence."),
+    "12-access-entry-oblique": ("Entry evidence in the oblique",
+                                "Selecting an entry zooms the Vexcel oblique image to the door the agent found. Positions on the plan are approximate, the oblique is the evidence."),
+    "11-access-high-rise": ("High-rise access",
+                            "For towers beyond aerial ladder reach the plan says so first: use interior stairs. Green walls become apparatus set-up positions."),
     "11-incab-standby": ("In-cab standby",
                          "Before any plan is approved, the unit stands by."),
 }
@@ -39,6 +45,7 @@ STEPS = {
 SECTIONS = [
     ("Live run: 1601 Perrino Pl, Los Angeles (real agent, all three data layers)", "screens-v3", "la-002-"),
     ("Live run: The Ion, 4201 Main St, Houston (real agent)", "screens-v3", "hou-001-"),
+    ("Live run: The Tower, 10940 Wilshire Blvd, Los Angeles (high-rise)", "screens-v3", "la-003-"),
 ]
 
 BG = HexColor("#ffffff")

@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { SourceGlyph, SourceTag, Spinner, StatusBadge, Td, Th, VerifyValue, Mono, planStatusTone } from "@/components/ui";
 import { coverage, fmtValue, humanize, isFieldObj, normCite, normField, sourceMeta, VERIFY, type NormCite, type NormField } from "@/lib/plan";
 import { splitDetail, clean, sentence } from "@/lib/text";
+import { accessData, entryLabel } from "./AccessView";
 import type { Plan } from "@/lib/types";
 
 export interface Selection {
@@ -355,7 +356,9 @@ export function PlanSheet({ plan, ctx, lanes, runId }: { plan: Plan | null; ctx:
         </SheetSection>
 
         <SheetSection title="Access" pending={!p.access && !laneDone("aerial")} agent="aerial">
+          <HighRiseNote plan={plan} />
           <Rows ctx={ctx} rows={fieldsOf(p.access, "access", [])} />
+          <Entries ctx={ctx} entries={Array.isArray(p.access?.entries) ? (p.access.entries as Array<Record<string, unknown>>) : []} />
         </SheetSection>
 
         <SheetSection title="Interior" pending={!interior && !laneDone("interior")} agent="interior">
@@ -763,6 +766,87 @@ const sentenceEnd = (s: string) => {
   const x = s.charAt(0).toUpperCase() + s.slice(1);
   return /[.!?]$/.test(x) ? x : `${x}.`;
 };
+
+/* ---------------- Access: high-rise note and entries ---------------- */
+
+function HighRiseNote({ plan }: { plan: Plan | null }) {
+  const d = accessData(plan);
+  if (!d.highRise) return null;
+  const roof = String(((plan?.access as Record<string, unknown> | undefined)?.roof_access as Record<string, unknown> | undefined)?.value ?? "");
+  const lead = clean(roof.split(/(?<=\.)\s|:\s/)[0] ?? "");
+  return (
+    <div className="mb-3 flex items-start gap-2 border-y border-l-2 border-y-line border-l-danger bg-danger-subtle px-6 py-2.5">
+      <AlertTriangle size={16} strokeWidth={2.25} className="mt-0.5 shrink-0 text-danger" />
+      <div className="text-sm text-fg">
+        <span className="font-semibold">Roof is beyond aerial ladder reach. Use interior stairs.</span>
+        {lead && <span className="ml-1 text-fg-2">{sentence(lead.replace(/[.:]$/, ""))}.</span>}
+      </div>
+    </div>
+  );
+}
+
+const ENTRY_PREVIEW = 8;
+
+function Entries({ ctx, entries }: { ctx: SheetCtx; entries: Array<Record<string, unknown>> }) {
+  const [all, setAll] = useState(false);
+  if (!entries.length) return null;
+  const shown = all ? entries : entries.slice(0, ENTRY_PREVIEW);
+  return (
+    <>
+      <table className="mt-3 w-full table-fixed border-collapse">
+        <colgroup>
+          <col className="w-14" />
+          <col className="w-[132px]" />
+          <col className="w-16" />
+          <col />
+          <col className="w-16" />
+        </colgroup>
+        <thead>
+          <tr>
+            <Th className="pl-6">Entry</Th>
+            <Th>Type</Th>
+            <Th>Side</Th>
+            <Th>Observed</Th>
+            <Th align="right" className="pr-6">
+              Conf.
+            </Th>
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((e, i) => {
+            const path = `access.entries.${i}`;
+            const cite = normCite(e.cite, e.conf);
+            const active = ctx.selected === path;
+            const type = entryLabel(String(e.type ?? "entrance"));
+            const sel = () => ctx.onSelect({ path, label: `Entry ${e.n ?? i + 1}, ${type}, ${String(e.side ?? "")} side`, value: sentence(clean(String(e.value ?? type))), cite });
+            return (
+              <tr key={i} onClick={sel} data-path={path} className={`cursor-pointer ${active ? "bg-accent-subtle" : "hover:bg-subtle"}`}>
+                <Td className="relative py-1.5 pl-6 tabular-nums text-fg-3">
+                  <SelBar on={active} />
+                  {String(e.n ?? i + 1)}
+                </Td>
+                <Td className="py-1.5 text-fg">{type}</Td>
+                <Td className="py-1.5 text-fg-2">{String(e.side ?? "")}</Td>
+                <Td className="truncate py-1.5 text-fg-2">
+                  <span title={String(e.value ?? "")}>{sentence(clean(String(e.value ?? "")))}</span>
+                  {e.verified === false && <span className="ml-2 text-xs text-warn">Unverified</span>}
+                </Td>
+                <Td align="right" className="py-1.5 pr-6 tabular-nums text-fg-2">
+                  {typeof e.conf === "number" ? `${Math.round(e.conf * 100)}%` : ""}
+                </Td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {entries.length > ENTRY_PREVIEW && (
+        <button type="button" onClick={() => setAll((v) => !v)} className="w-full border-b border-line px-6 py-2 text-left text-xs font-medium text-accent hover:bg-subtle">
+          {all ? `Show first ${ENTRY_PREVIEW}` : `Show all ${entries.length} entries`}
+        </button>
+      )}
+    </>
+  );
+}
 
 /* ---------------- Exposures ---------------- */
 

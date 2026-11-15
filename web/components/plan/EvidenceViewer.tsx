@@ -7,6 +7,7 @@ import { mockAerialUrl, mockCostarRecord, MOCK_MATTERPORT_MODEL } from "@/lib/mo
 import { normCite, sourceMeta, type NormCite } from "@/lib/plan";
 import { clean, sentence, splitDetail } from "@/lib/text";
 import type { Building, Plan } from "@/lib/types";
+import { AccessView, hasAccessGeometry, type AccessFocus } from "./AccessView";
 import { PanoViewer } from "./PanoViewer";
 import type { Selection } from "./PlanSheet";
 
@@ -53,7 +54,9 @@ export function EvidenceViewer({ selection, plan, building, evidence, mock, onNa
             <>
               <FactHeader selection={selection} />
               <div className="mt-4">
-                {!cite ? (
+                {accessFocus(selection.path, plan) ? (
+                  <AccessView key={selection.path} plan={plan} focus={accessFocus(selection.path, plan)!} />
+                ) : !cite ? (
                   <NoEvidence />
                 ) : src === "vexcel" ? (
                   <VexcelView cite={cite} plan={plan} building={building} mock={mock} evidence={evidence} selectedPath={selection.path} />
@@ -74,6 +77,20 @@ export function EvidenceViewer({ selection, plan, building, evidence, mock, onNa
       </div>
     </div>
   );
+}
+
+/** Roof access, staging, entries and the entries summary all open the single access plan view. */
+function accessFocus(path: string, plan: Plan | null): AccessFocus | null {
+  if (!hasAccessGeometry(plan)) return null;
+  if (path === "access.roof_access") return { kind: "roof" };
+  if (path === "access.staging") return { kind: "staging" };
+  if (path === "access.entries_summary") return { kind: "summary" };
+  const m = path.match(/^access\.entries\.(\d+)/);
+  if (m) {
+    const entries = ((plan?.access as Record<string, unknown> | undefined)?.entries ?? []) as Array<{ n?: number }>;
+    return { kind: "entry", n: entries[Number(m[1])]?.n ?? Number(m[1]) + 1 };
+  }
+  return null;
 }
 
 function FactHeader({ selection }: { selection: Selection }) {

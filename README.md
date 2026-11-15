@@ -71,7 +71,6 @@ flowchart LR
     subgraph Backend["agent/  FastAPI on :8000"]
         API["REST + SSE API<br/>/preplan /stream /approve"]
         AGENT["deepagents planner<br/>+ 5 subagents"]
-        OFF["Offline pipeline<br/>(replays cached runs)"]
         VAL["Validator<br/>cite or flag"]
         PUB["Publisher<br/>PDF + voice brief"]
     end
@@ -88,7 +87,6 @@ flowchart LR
 
     WEB -- "pick building" --> API
     API --> AGENT
-    API -. "no key / no network" .-> OFF
     AGENT --> COSTAR & VEX & MP
     AGENT <--> CLAUDE
     AGENT --> VAL --> API

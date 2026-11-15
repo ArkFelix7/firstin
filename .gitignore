@@ -11,8 +11,6 @@ agent/out/
 .DS_Store
 co-star-creds.md
 
-# Sponsor data (CoStar/Vexcel/Matterport): keep out of the public repo.
-# Regenerate locally with the scripts in agent/scripts/ and your own keys.
 agent/cache/matterport/**
 !agent/cache/matterport/*.md
 agent/cache/vexcel/**

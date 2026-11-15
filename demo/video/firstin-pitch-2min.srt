@@ -1,0 +1,104 @@
+1
+00:00:00,380 --> 00:00:05,273
+Five weeks ago in Durham, a roof came down on a firefighter searching a burning building.
+
+2
+00:00:05,353 --> 00:00:06,650
+It keeps happening.
+
+3
+00:00:06,730 --> 00:00:12,233
+In Houston, in 2013, the roof came down twelve minutes after the first engine arrived.
+
+4
+00:00:12,313 --> 00:00:14,636
+Four firefighters never came out.
+
+5
+00:00:14,766 --> 00:00:19,949
+The state fire marshal's first finding was simple. There were no pre-fire plans for that building.
+
+6
+00:00:20,029 --> 00:00:23,437
+No site diagram. No record of how it was built.
+
+7
+00:00:24,880 --> 00:00:28,506
+Plans like that come from an officer walking the building with a clipboard.
+
+8
+00:00:28,586 --> 00:00:30,622
+Nobody can walk every building.
+
+9
+00:00:30,980 --> 00:00:36,935
+Last year a Georgia firefighter died in a warehouse where, NIOSH wrote, no pre-incident plan was available.
+
+10
+00:00:37,015 --> 00:00:39,108
+The old ones sat in binders.
+
+11
+00:00:41,180 --> 00:00:45,279
+The facts are already out there, in data nobody hands to the fire service.
+
+12
+00:00:45,359 --> 00:00:47,434
+Here's a warehouse in east LA.
+
+13
+00:00:47,680 --> 00:00:50,398
+Our agent sends three analysts out at once.
+
+14
+00:00:51,480 --> 00:00:53,131
+CoStar knows what's inside.
+
+15
+00:00:53,211 --> 00:00:58,824
+A 1969 concrete tilt-up, a health-and-beauty wholesaler, eleven dock doors.
+
+16
+00:00:59,480 --> 00:01:04,002
+The Matterport scan shows a steel mezzanine stair and pallets stacked on the floor.
+
+17
+00:01:05,480 --> 00:01:11,511
+Vexcel shows solar across the roof, the walls a ladder truck can actually reach, and where to park it.
+
+18
+00:01:11,880 --> 00:01:17,949
+Every line cites a source. Hydrants it can't see, so it says verify on site, never a guess.
+
+19
+00:01:18,029 --> 00:01:20,799
+Nothing goes to a crew until an officer signs off.
+
+20
+00:01:20,879 --> 00:01:22,462
+Even from a text.
+
+21
+00:01:35,080 --> 00:01:40,523
+Fire departments already pay for pre-planning software, and FEMA prevention grants fund it.
+
+22
+00:01:40,603 --> 00:01:45,293
+A city's insurance grade rewards pre-planning every commercial building, every year.
+
+23
+00:01:45,373 --> 00:01:48,241
+With our draft waiting, the walk becomes a check.
+
+24
+00:01:48,321 --> 00:01:52,353
+We sell per building, inside the software departments already use.
+
+25
+00:01:52,433 --> 00:01:56,097
+We've already indexed 3,288 buildings in Houston and LA.
+
+26
+00:01:56,177 --> 00:01:59,318
+The next crew should know the building before they're inside it.
+

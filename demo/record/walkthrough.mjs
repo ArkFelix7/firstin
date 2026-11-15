@@ -28,6 +28,8 @@
 // Other
 //   --shots <dir>     save a screenshot at the end of each beat (for dry runs)
 //   --close           close the browser at the end instead of waiting for Enter
+//   --video <out.mp4> record it yourself: hidden 1920x1080 browser, frame capture, auto timing,
+//                     voice brief audio mixed in at the Brief me click (needs ffmpeg)
 //   --base / --api    web and API origins (defaults :3000 / :8000)
 //   --building la-002
 import { createRequire } from "node:module";
@@ -49,7 +51,8 @@ const opt = (n, d) => {
   const i = argv.indexOf(`--${n}`);
   return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith("--") ? argv[i + 1] : d;
 };
-const AUTO = flag("auto");
+const VIDEO = opt("video", null) ? path.resolve(opt("video")) : null;
+const AUTO = flag("auto") || !!VIDEO;
 const LIVE = flag("live");
 const IMESSAGE = flag("imessage");
 const REUSE = opt("run", null);
@@ -60,7 +63,7 @@ const BID = opt("building", "la-002");
 const SIZE = opt("size", "auto");
 const FULLSCREEN = flag("fullscreen");
 const SHOTS = opt("shots", null) ? path.resolve(opt("shots")) : null;
-const CLOSE = flag("close");
+const CLOSE = flag("close") || !!VIDEO;
 const STREET = { "la-002": "1601 Perrino Pl", "la-001": "337 S Broadway", "la-003": "10940 Wilshire Blvd" }[BID] ?? BID;
 if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
 
@@ -146,12 +149,12 @@ log(`backend ${health.mode} mode, ${health.buildings} buildings`);
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), "firstin-rec-"));
 const ctx = await chromium.launchPersistentContext(profile, {
   channel: "chrome",
-  headless: false,
-  viewport: null, // real window, native devicePixelRatio (2 on Retina)
+  headless: !!VIDEO,
+  viewport: VIDEO ? { width: 1920, height: 1080 } : null, // real window, native devicePixelRatio (2 on Retina)
   chromiumSandbox: true, // otherwise Playwright adds --no-sandbox, which shows a warning infobar
   ignoreDefaultArgs: ["--enable-automation", "--no-sandbox"],
   args: [
-    `--app=data:text/html,<title>FirstIn</title><body style="background:%23f6f5f2"></body>`,
+    ...(VIDEO ? ["--use-gl=angle", "--enable-unsafe-swiftshader"] : [`--app=data:text/html,<title>FirstIn</title><body style="background:%23f6f5f2"></body>`]),
     "--disable-infobars",
     "--autoplay-policy=no-user-gesture-required",
     "--no-first-run",
@@ -227,6 +230,7 @@ async function sizeWindow() {
     await sleep(1200);
     return page.evaluate(() => [innerWidth, innerHeight]);
   }
+  if (VIDEO) return page.evaluate(() => [innerWidth, innerHeight, devicePixelRatio]);
   const scr = await page.evaluate(() => [screen.availWidth, screen.availHeight]);
   let [w, h] = SIZE === "auto" ? (scr[0] >= 1920 && scr[1] >= 1080 + 40 ? [1920, 1080] : [1440, 810]) : SIZE.split("x").map(Number);
   const cdp = await ctx.newCDPSession(page);
@@ -324,6 +328,43 @@ async function routeGenerate() {
     await sleep(350); // feel like a real round trip
     return route.fulfill({ status: 200, headers: cors, contentType: "application/json", body: JSON.stringify({ run_id: runId, mode: "agent", stream_url: `/stream/${runId}` }) });
   });
+}
+
+/* ------------------------------------------------------------------ video capture (--video) */
+let BRIEF_AT = null;
+const FRAMES = VIDEO ? fs.mkdtempSync(path.join(os.tmpdir(), "firstin-frames-")) : null;
+const frames = [];
+let cast = null;
+async function startCapture() {
+  cast = await ctx.newCDPSession(page);
+  cast.on("Page.screencastFrame", async ({ data, metadata, sessionId }) => {
+    const f = path.join(FRAMES, `f${String(frames.length).padStart(6, "0")}.jpg`);
+    fs.writeFileSync(f, Buffer.from(data, "base64"));
+    frames.push({ f, t: metadata.timestamp });
+    cast.send("Page.screencastFrameAck", { sessionId }).catch(() => {});
+  });
+  await cast.send("Page.startScreencast", { format: "jpeg", quality: 92, maxWidth: 1920, maxHeight: 1080, everyNthFrame: 1 });
+}
+async function encodeVideo(endT) {
+  const { spawnSync } = await import("node:child_process");
+  await cast.send("Page.stopScreencast").catch(() => {});
+  const list = frames.map((fr, i) => `file '${fr.f}'\nduration ${Math.max(0.001, ((frames[i + 1]?.t ?? endT) - fr.t)).toFixed(3)}`).join("\n") + `\nfile '${frames.at(-1).f}'\n`;
+  const lp = path.join(FRAMES, "list.txt");
+  fs.writeFileSync(lp, list);
+  const args = ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lp];
+  let audio = null;
+  const a = await api("/incab/active").catch(() => null);
+  if (a?.audio_url && BRIEF_AT) {
+    audio = path.join(FRAMES, "brief.mp3");
+    fs.writeFileSync(audio, Buffer.from(await (await fetch(a.audio_url)).arrayBuffer()));
+    const delay = Math.max(0, Math.round((BRIEF_AT - frames[0].t) * 1000 + 250));
+    args.push("-i", audio, "-filter_complex", `[1:a]adelay=${delay}|${delay}[a]`, "-map", "0:v", "-map", "[a]", "-c:a", "aac", "-b:a", "160k");
+  }
+  args.push("-vf", "fps=30,scale=1920:1080:flags=lanczos,format=yuv420p", "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-movflags", "+faststart", VIDEO);
+  const r = spawnSync("ffmpeg", args, { stdio: "inherit" });
+  if (r.status !== 0) throw new Error("ffmpeg failed");
+  fs.rmSync(FRAMES, { recursive: true, force: true });
+  log(`video written: ${VIDEO} (${(endT - frames[0].t).toFixed(1)} s, ${frames.length} frames${audio ? ", with voice brief audio" : ""})`);
 }
 
 /* ------------------------------------------------------------------ beat actions */
@@ -449,6 +490,7 @@ const actions = {
     await page.getByText(new RegExp(STREET.split(" ")[0])).first().waitFor({ timeout: 10000 }).catch(() => {});
     await sleep(1000);
     await click(brief, { dx: 0.4 });
+    BRIEF_AT = Date.now() / 1000;
   },
 };
 
@@ -468,7 +510,7 @@ console.log(`\n${C.b}FirstIn walkthrough${C.x}  mode=${AUTO ? "auto" : "step"}  
 const rect = await page.evaluate(() => ({ x: screenX, y: screenY + (outerHeight - innerHeight), w: innerWidth, h: innerHeight }));
 console.log(`${C.dim}Start recording now: Cmd+Shift+5, "Record Selected Portion", drag exactly over the page (below the title bar):`);
 console.log(`  x ${rect.x}, y ${rect.y}, ${rect.w} x ${rect.h} points. Then Record. Click into this terminal before pressing Enter.${C.x}`);
-await waitEnter("Press Enter to begin. ");
+if (!VIDEO) await waitEnter("Press Enter to begin. ");
 
 let warm = 0;
 if (!REUSE && !LIVE) {
@@ -478,6 +520,7 @@ if (!REUSE && !LIVE) {
 if (warm > 0) await countdown(warm * 1000, "Agent warming up, first beat in");
 else await countdown(3000, "First beat in");
 
+if (VIDEO) { await startCapture(); await sleep(1200); }
 const T0 = Date.now(); // == 0:42 on the SCRIPT.md clock
 const timings = [];
 for (let i = 0; i < BEATS.length; i++) {
@@ -503,7 +546,19 @@ for (let i = 0; i < BEATS.length; i++) {
 }
 
 // let the brief play out
-if (AUTO) await countdown(Math.max(9000, (T0 + (END_T - 42) * 1000) - Date.now()), "voice brief playing, end in");
+if (VIDEO) {
+  // play the whole brief, then hold a beat
+  let dur = 22;
+  try {
+    const a = await api("/incab/active");
+    const { spawnSync } = await import("node:child_process");
+    const tmp = path.join(FRAMES, "probe.mp3");
+    fs.writeFileSync(tmp, Buffer.from(await (await fetch(a.audio_url)).arrayBuffer()));
+    const p = spawnSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", tmp]);
+    dur = Number(String(p.stdout).trim()) || dur;
+  } catch {}
+  await countdown(Math.max(2000, ((BRIEF_AT ?? Date.now() / 1000) + dur + 1.5) * 1000 - Date.now()), "voice brief playing, end in");
+} else if (AUTO) await countdown(Math.max(9000, (T0 + (END_T - 42) * 1000) - Date.now()), "voice brief playing, end in");
 else await waitEnter("Enter when the brief has finished. ");
 const plays = await page.evaluate(() => window.__plays ?? []).catch(() => []);
 const finish = (Date.now() - T0) / 1000 + 42;
@@ -516,8 +571,10 @@ for (const [i, t] of timings.entries()) {
 console.log(`  end       script ${fmtT(END_T)}  actual ${fmtT(finish)}`);
 console.log(`  audio: ${plays.length ? plays.map((p) => `${p.ok === true ? "played" : `failed ${p.ok}`} ${p.src.split("/").pop()}`).join(", ") : "no audio element played (speechSynthesis fallback?)"}`);
 console.log(`  run: ${runId}  page errors: ${errors.length ? errors.slice(0, 3).join(" | ") : "none"}`);
-console.log(`\n${C.g}Done. Stop the recording (Cmd+Ctrl+Esc or the stop button in the menu bar).${C.x}`);
+if (!VIDEO) console.log(`\n${C.g}Done. Stop the recording (Cmd+Ctrl+Esc or the stop button in the menu bar).${C.x}`);
 if (!CLOSE) await waitEnter("Enter to close the browser. ");
+const ENDT = Date.now() / 1000;
+if (VIDEO) await encodeVideo(ENDT);
 rl.close();
 await ctx.close();
 fs.rmSync(profile, { recursive: true, force: true });

@@ -26,5 +26,4 @@ web/public/mock/
 demo/screens/
 demo/screens-v2/
 
-# Private handoff notes for Claude sessions (contains access details)
 CLAUDE.local.md

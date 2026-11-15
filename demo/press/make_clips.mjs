@@ -24,6 +24,19 @@ export const CLIPS = [
   { slug: "i10-ap-hazards-2023", kind: "capture", outlet: "Associated Press, via Fire Engineering", date: "November 19, 2023", url: "fireengineering.com/fire-safety/investigators-found-fire-safety-hazards-freeway-arson" },
   { slug: "i10-ap-repairs-2023", kind: "capture", outlet: "Associated Press, via KOMO News", date: "November 17, 2023", url: "komonews.com/news/nation-world/speedy-repairs-to-arson-fire-damaged-la-los-angeles-freeway-..." },
   { slug: "watson-abc13-2023", kind: "capture", outlet: "ABC13 Houston", date: "June 30, 2023", url: "abc13.com/13446456" },
+  // --- Recent (2025-2026), newest first. See SOURCES.md "Recent".
+  { slug: "recent-brooklyn-sunsetpark-2026", kind: "capture", outlet: "Associated Press, via Spectrum News NY1", date: "November 5, 2026", url: "ny1.com/nyc/all-boroughs/ap-top-news/2026/11/05/house-fire-in-brooklyn-kills-6-people-..." },
+  { slug: "recent-durham-collapse-2026", kind: "capture", outlet: "ABC11 Raleigh-Durham (WTVD)", date: "October 8, 2026", url: "abc11.com/post/firefighter-dies-durham-working-massive-fire-2-other-firefighters-injured/19921200" },
+  { slug: "recent-niosh-f2026-04-cover-2026", kind: "capture", outlet: "NIOSH Fire Fighter Fatality Investigation, Report F2026-04 (Chicago, Mar. 16, 2026)", date: "November 2026", url: "cdc.gov/niosh/firefighters/programs/pdfs/f202604.pdf" },
+  { slug: "recent-la-hope-st-2026", kind: "capture", outlet: "Los Angeles Fire Department, news release", date: "May 11, 2026", url: "lafd.org/news/major-emergency-structure-fire-downtown-los-angeles-one-firefighter-injured" },
+  { slug: "recent-niosh-f2025-09-cover-2026", kind: "capture", outlet: "NIOSH Fire Fighter Fatality Investigation, Report F2025-09", date: "March 2026", url: "cdc.gov/niosh/firefighters/programs/pdfs/f202509.pdf" },
+  { slug: "recent-niosh-f2025-09-preplan-2026", kind: "capture", outlet: "NIOSH Report F2025-09, Recommendation #8 (p. 28)", date: "March 2026", url: "cdc.gov/niosh/firefighters/programs/pdfs/f202509.pdf" },
+  { slug: "recent-chicago-altman-2026", kind: "capture", outlet: "FOX 32 Chicago", date: "March 17, 2026", url: "fox32chicago.com/news/chicago-firefighter-dies-north-side" },
+  { slug: "recent-houston-braesridge-2025", kind: "capture", outlet: "KPRC 2 Click2Houston", date: "December 19, 2025", url: "click2houston.com/news/local/2025/12/19/apartment-fire-draws-emergency-response-in-sw-houston" },
+  { slug: "recent-la-highrise-2025", kind: "capture", outlet: "CBS Los Angeles", date: "September 16, 2025", url: "cbsnews.com/losangeles/news/downtown-los-angeles-high-rise-fire" },
+  { slug: "recent-dekalb-warehouse-2025", kind: "capture", outlet: "Atlanta News First", date: "September 8, 2025", url: "atlantanewsfirst.com/2025/09/09/dekalb-county-firefighter-dies-after-battling-blaze-lithonia-warehouse" },
+  { slug: "recent-niosh-f2023-07-cover-2025", kind: "capture", outlet: "NIOSH Fire Fighter Fatality Investigation, Report F2023-07", date: "April 2025", url: "cdc.gov/niosh/firefighters/programs/pdfs/face202307.pdf" },
+  { slug: "recent-columbia-sc-collapse-2023", kind: "capture", outlet: "WIS News 10, Columbia, S.C.", date: "May 26, 2023", url: "wistv.com/2023/05/26/columbia-richland-fire-department-multiple-people-rescued-apartment-fire" },
 ];
 
 const COLLAGE = [
@@ -102,15 +115,63 @@ for (const c of CLIPS) {
   console.log("clip", c.slug);
 }
 
-// Collage 1920x1080 from rendered clips
-const items = COLLAGE.map(([slug, l, t, w, r, z]) => {
-  const uri = "data:image/png;base64," + fs.readFileSync(path.join(here, "clips", `${slug}.png`)).toString("base64");
-  return `<img src="${uri}" style="position:absolute;left:${l}px;top:${t}px;width:${w}px;transform:rotate(${r}deg);z-index:${z}">`;
-}).join("");
-const cpage = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
-await cpage.setContent(`<style>body{margin:0;width:1920px;height:1080px;overflow:hidden;
-  background: radial-gradient(ellipse at 50% 40%, #2a2724 0%, #151413 75%);}</style>${items}`);
-await cpage.waitForTimeout(300);
-await cpage.screenshot({ path: path.join(here, "collage.png") });
-console.log("collage done");
+const clipURI = (slug) => "data:image/png;base64," + fs.readFileSync(path.join(here, "clips", `${slug}.png`)).toString("base64");
+const BG = "background: radial-gradient(ellipse at 50% 40%, #2a2724 0%, #151413 75%);";
+async function shot(html, out) {
+  const cpage = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+  await cpage.setContent(`<style>body{margin:0;width:1920px;height:1080px;overflow:hidden;position:relative;${BG}}
+    .t{position:absolute;font:400 22px/1 Georgia,serif;letter-spacing:.32em;color:rgba(245,241,232,.55);text-transform:uppercase}</style>${html}`);
+  await cpage.waitForTimeout(300);
+  await cpage.screenshot({ path: path.join(here, out) });
+  await cpage.close();
+  console.log("wrote", out);
+}
+const place = (rows) => rows.map(([slug, l, t, w, r, z]) =>
+  `<img src="${clipURI(slug)}" style="position:absolute;left:${l}px;top:${t}px;width:${w}px;transform:rotate(${r}deg);z-index:${z}">`).join("");
+
+// Collage 1920x1080 from rendered clips (original, 2007-2023)
+await shot(place(COLLAGE), "collage.png");
+
+// Recent collage, 2025-2026
+const COLLAGE_RECENT = [
+  ["recent-durham-collapse-2026", 50, 70, 840, -1.4, 3],
+  ["recent-brooklyn-sunsetpark-2026", 960, 50, 900, 1.1, 2],
+  ["recent-chicago-altman-2026", 1010, 300, 850, -0.8, 4],
+  ["recent-niosh-f2025-09-preplan-2026", 70, 330, 900, 0.9, 5],
+  ["recent-houston-braesridge-2025", 1030, 690, 800, 1.6, 6],
+  ["recent-dekalb-warehouse-2025", 90, 770, 860, -1.2, 7],
+];
+await shot(place(COLLAGE_RECENT) + `<div class="t" style="left:60px;top:28px">2025 to 2026</div>`, "collage-recent.png");
+
+// Timeline strip: old and new together. Alternating above/below a horizontal rule.
+const TIMELINE = [
+  ["charleston-nbc-2007", "June 2007", "Charleston, S.C."],
+  ["southwest-inn-nbc-2013", "May 2013", "Houston"],
+  ["i10-abc7-2023", "Nov 2023", "Los Angeles"],
+  ["recent-dekalb-warehouse-2025", "Sept 2025", "DeKalb Co., Ga."],
+  ["recent-houston-braesridge-2025", "Dec 2025", "Houston"],
+  ["recent-chicago-altman-2026", "Mar 2026", "Chicago"],
+  ["recent-la-hope-st-2026", "May 2026", "Los Angeles"],
+  ["recent-durham-collapse-2026", "Oct 2026", "Durham, N.C."],
+  ["recent-brooklyn-sunsetpark-2026", "Nov 2026", "Brooklyn, N.Y."],
+];
+const LINE_Y = 540, X0 = 215, X1 = 1705, CW = 395, GAP = 96;
+let tl = `<div style="position:absolute;left:70px;right:70px;top:${LINE_Y}px;height:2px;background:rgba(245,241,232,.35)"></div>`;
+TIMELINE.forEach(([slug, when, where], i) => {
+  const x = X0 + ((X1 - X0) * i) / (TIMELINE.length - 1);
+  const up = i % 2 === 0;
+  const dot = slug.startsWith("recent-") ? "#c8462e" : "rgba(245,241,232,.75)";
+  tl += `<div style="position:absolute;left:${x - 7}px;top:${LINE_Y - 6}px;width:14px;height:14px;border-radius:50%;background:${dot}"></div>`;
+  // label sits between dot and card, on the card's side
+  tl += `<div style="position:absolute;left:${x - 110}px;width:220px;text-align:center;top:${up ? LINE_Y - 62 : LINE_Y + 18}px;
+    font:600 18px/1.25 Georgia,serif;color:rgba(245,241,232,.88)">${when}<br><span style="font-weight:400;font-size:14px;color:rgba(245,241,232,.55)">${where}</span></div>`;
+  tl += `<div style="position:absolute;left:${x}px;top:${up ? LINE_Y - GAP - 6 : LINE_Y + 66}px;width:1px;height:36px;background:rgba(245,241,232,.25)"></div>`;
+  const left = Math.max(16, Math.min(1920 - CW - 16, x - CW / 2));
+  tl += `<div style="position:absolute;left:${left}px;width:${CW}px;${up ? `bottom:${1080 - LINE_Y + GAP}px` : `top:${LINE_Y + GAP}px`};z-index:${i + 2}">
+    <img src="${clipURI(slug)}" style="width:100%;display:block;transform:rotate(${((i % 3) - 1) * 0.8}deg)"></div>`;
+});
+tl += `<div style="position:absolute;left:60px;bottom:34px;font:15px/1 Georgia,serif;color:rgba(245,241,232,.5)">
+  <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(245,241,232,.75);margin-right:8px"></span>2007 to 2023
+  <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c8462e;margin:0 8px 0 28px"></span>2025 to 2026</div>`;
+await shot(tl + `<div class="t" style="left:60px;top:28px">2007 to 2026</div>`, "collage-timeline.png");
 await browser.close();

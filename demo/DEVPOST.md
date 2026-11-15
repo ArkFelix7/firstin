@@ -15,6 +15,8 @@ FirstIn writes the fire pre-plan before anyone walks the building: CoStar, Vexce
 
 On May 31, 2013, four Houston firefighters were killed when the roof of a burning restaurant on the Southwest Freeway collapsed, twelve minutes after the first engine arrived. A fifth died of his injuries in 2017. The Texas State Fire Marshal's first finding was: "There were no pre-fire plans of this structure... no indication of a record of a site diagram, fire protection systems, or construction methods."
 
+It keeps happening. In September 2025 a Georgia firefighter died in a warehouse where, NIOSH found, "no pre-incident plan was available for crews to view enroute or on arrival." In October 2026 a roof collapse in Durham, North Carolina killed a 24-year-old firefighter searching a burning building.
+
 A pre-incident plan is the document that tells a crew how a building is built, where the stairs and standpipes are, what the tenants store and how to reach the roof, before they get there. Departments make them by walking buildings, and they can't walk them all. NIOSH said so in a 2025 fatality report: "many fire departments are unable to pre-plan for all the structures within their jurisdiction." Plano Fire-Rescue had plans for 1,087 of 2,345 target buildings. In a Georgia warehouse death in 2025, NIOSH found that "no pre-incident plan was available for crews to view enroute or on arrival."
 
 Meanwhile, the facts a pre-plan needs already exist, spread across CoStar's property and tenant records, Vexcel's aerial imagery and Matterport's 3D scans. Nobody had pointed them at the fire service.

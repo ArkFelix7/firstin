@@ -28,6 +28,14 @@ Two things we never say, because the investigations don't support them:
 
 ## 2. It keeps happening
 
+**The last fourteen months** (clippings in `press/collage-recent.png`, sources in `press/SOURCES.md` and `research/fires.md`):
+- **Durham, North Carolina, October 8, 2026.** A 24-year-old firefighter searching a burning building was killed when the roof collapsed; two more were injured (ABC11).
+- **Chicago, March 17, 2026.** A firefighter fell through a floor into a basement fire and died. NIOSH published its report (F2026-04) this month; the building had code violations going back to 1996.
+- **DeKalb County, Georgia, September 8, 2025.** A firefighter died in a warehouse that had become an unpermitted film studio. NIOSH (F2025-09): "no pre-incident plan was available for crews to view enroute or on arrival." The last inspection was in 2017, when it stored car parts.
+- **Houston, December 19, 2025.** A woman was found dead in a collapsed unit after a large apartment fire in southwest Houston (KPRC).
+- **Brooklyn, November 5, 2026.** A row-house fire killed six people and injured nine (AP).
+
+
 **Charleston, 2007.** Nine firefighters died at the Sofa Super Store. NIOSH reproduced the department's handwritten pre-plan for the building: one page, roof type "Comp.", sprinklers "N/A". NIOSH wrote that the form "did not mention the large volume of furniture and flammable materials (fuel load) contained in the structure" [F6]. The clipping of that form is in `press/clips/niosh-f2007-18-preplan-form.png`.
 
 **South Carolina, 2025.** A 25-year-old firefighter died in a lightweight-construction collapse. NIOSH: "many fire departments are unable to pre-plan for all the structures within their jurisdiction," and "the use of technology and programs can assist fire departments in conducting pre-incident planning" [M34].

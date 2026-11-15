@@ -1,6 +1,6 @@
 # FirstIn: 2-minute pitch script
 
-One speaker plus one person driving the laptop. Narration is 271 words, about 1:48 at a calm 150 words per minute, which leaves room for the 8-second voice brief to play out loud. Every number below is sourced in `STORY.md`.
+One speaker plus one person driving the laptop. Narration is 278 words, about 1:51 at a calm 150 words per minute, which leaves room for the 8-second voice brief to play out loud. Every number below is sourced in `STORY.md`.
 
 Before you start, have the following ready:
 - `/` with 1601 Perrino Pl selected.
@@ -14,9 +14,9 @@ Before you start, have the following ready:
 
 | Shot | On screen |
 |---|---|
-| `demo/press/collage.png`, slow push in toward the NBC headline | The clippings, no extra text |
+| `demo/press/collage-timeline.png`: start on the newest clipping (Durham, Oct 2026), then pan right to left back to Houston, May 2013, and push in on its headline | The clippings, no extra text |
 
-> May 31st, 2013. Houston firefighters went into a burning restaurant on the Southwest Freeway. Twelve minutes after the first engine pulled up, the roof came down. Four of them never came out.
+> Five weeks ago in Durham, a roof came down on a firefighter searching a burning building. It keeps happening. In Houston, in 2013, the roof came down twelve minutes after the first engine arrived. Four firefighters never came out.
 
 Pause one beat.
 
@@ -32,10 +32,10 @@ Pause one beat.
 
 | Shot | On screen |
 |---|---|
-| `demo/press/clips/niosh-f2007-18-preplan-form.png`, the handwritten Charleston form | Small caption: "A real pre-plan. Charleston, 2006." |
-| Then a plain slide with one quote | "Many fire departments are unable to pre-plan for all the structures within their jurisdiction." NIOSH, 2025 |
+| `demo/press/clips/niosh-f2007-18-preplan-form.png`, the handwritten Charleston form (about 6 s) | Small caption: "A real pre-plan. Charleston, 2006." |
+| Then `demo/press/clips/recent-niosh-f2025-09-preplan-2026.png` (about 10 s) | Highlight "no pre-incident plan was available" and "three-ring binders" |
 
-> That plan is supposed to come from an officer walking the building with a clipboard. Nobody can walk every building in a city. NIOSH keeps writing the same sentence: departments can't pre-plan everything they protect.
+> Plans like that come from an officer walking the building with a clipboard. Nobody can walk every building. Last year a Georgia firefighter died in a warehouse where, NIOSH wrote, no pre-incident plan was available. The old ones sat in binders.
 
 ## 0:42 to 1:22. FirstIn, live
 
@@ -46,7 +46,7 @@ Pause one beat.
 | 0:52 | Building section: 1969, concrete tilt-up, 70,565 SF, CoStar tags | > CoStar knows what's inside. A 1969 concrete tilt-up, a health-and-beauty wholesaler, eleven dock doors. |
 | 1:00 | Click Stairwell: Matterport 360 with the box on the steel stair | > The Matterport scan shows a steel mezzanine stair and pallets stacked on the floor. |
 | 1:06 | Click Roof access: the access plan on the Vexcel aerial, with green ladder walls, the blue staging area and numbered doors | > Vexcel shows solar across the roof, the walls a ladder truck can actually reach, and where to park it. |
-| 1:12 | Height row: "Verified across 2 sources". Then scroll to the Verify on site checklist | > Every line cites its source. Two sources agree on the height. Hydrants it can't see, so it says verify on site instead of guessing. |
+| 1:12 | Height row: "Verified across 2 sources". Then scroll to the Verify on site checklist | > Every line cites a source. Hydrants it can't see, so it says verify on site, never a guess. |
 | 1:18 | Phone in hand: iMessage from FirstIn, type APPROVE | > Nothing goes to a crew until an officer signs off. Even from a text. |
 
 ## 1:22 to 1:32. In the cab
@@ -65,7 +65,7 @@ Say nothing. Let the brief speak: *"Engine 12, one-story industrial, built 1969,
 | | **Cities:** the ISO grade credits pre-planning every commercial building, every year. Better grade, lower premiums. |
 | | **How we sell:** about $10 to $15 per building per year, inside First Due, ImageTrend and Tablet Command. |
 
-> Fire departments already pay for pre-planning software, and FEMA prevention grants fund it. A city's insurance grade rewards pre-planning every commercial building, every year. Nobody can do that on foot. With our draft waiting, the walk becomes a check. We sell per building, inside the software departments already use.
+> Fire departments already pay for pre-planning software, and FEMA prevention grants fund it. A city's insurance grade rewards pre-planning every commercial building, every year. With our draft waiting, the walk becomes a check. We sell per building, inside the software departments already use.
 
 ## 1:52 to 2:00. Close
 

@@ -2,7 +2,7 @@
 
 On May 31, 2013, Houston firefighters went into a burning restaurant on the Southwest Freeway. Twelve minutes after the first engine arrived, the roof came down. Four of them never came out, and a fifth died of his injuries in 2017. The Texas State Fire Marshal's first finding was short: *"There were no pre-fire plans of this structure... no indication of a record of a site diagram, fire protection systems, or construction methods."*
 
-We assumed that was history. It isn't. In September 2025 a Georgia firefighter died in a warehouse where, NIOSH found, *"no pre-incident plan was available for crews to view enroute or on arrival."* The plans that department did have sat in three-ring binders. Five weeks ago in Durham, North Carolina, a roof collapse killed a 24-year-old firefighter searching a burning building.
+We assumed that was history. It isn't. In September 2025 a Georgia firefighter died in a warehouse where, NIOSH found, *"no pre-incident plan was available for crews to view enroute or on arrival."* The plans that department did have sat in three-ring binders. In October 2026, in Durham, North Carolina, a roof collapse killed a 24-year-old firefighter searching a burning building.
 
 A pre-incident plan tells a crew how a building is built, where the stairs and standpipes are, what the tenants store and how to reach the roof, before they get there. Departments make them by walking buildings with a clipboard, and they can't walk them all. NIOSH wrote it plainly in 2025: *"many fire departments are unable to pre-plan for all the structures within their jurisdiction."* Plano Fire-Rescue had plans for 1,087 of 2,345 target buildings.
 

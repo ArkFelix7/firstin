@@ -37,7 +37,7 @@ STAIR_FIRST = re.compile(r"stair|elec|mech|utility|lobby|entr|corridor|hall|rise
 TOOL_SOURCE = {
     "costar_property": "costar", "costar_tenants": "costar",
     "vexcel_tile": "vexcel", "vexcel_roof": "vexcel", "vexcel_footprint": "vexcel", "vexcel_oblique": "vexcel",
-    "analyze_aerial_image": "vexcel",
+    "analyze_aerial_image": "vexcel", "analyze_access": "vexcel",
     "matterport_model": "matterport", "matterport_panoramas": "matterport", "analyze_interior_image": "matterport",
     "describe_image": "vision", "match_hazards": "hazards", "add_hazards": "hazards",
 }
@@ -106,6 +106,9 @@ def summarize(res: Any) -> str:
             bits.append(str(res["answer"])[:120])
     if "stats" in res:
         bits.append(json.dumps(res["stats"]))
+    if "edges" in res and "entries" in res:  # analyze_access
+        bits.append(f"{len(res['edges'])} ladder walls ({(res.get('roof_access') or {}).get('short') or 'none verified'}), "
+                    f"staging {'polygon' if res.get('staging') else 'VERIFY ON SITE'}, {len(res['entries'])} entries")
     return ", ".join(bits) or "ok"
 
 
@@ -156,8 +159,12 @@ def evidence_from(run: Run, files: dict | None = None, with_llm_hazards: bool = 
         an = next((y["result"] for y in raw.get("analyze_aerial_image", [])
                    if y["args"].get("image_path") == (x["result"] or {}).get("image_path")), None)
         obl.append({"tile": x["result"], "analysis": an})
+    if not raw.get("analyze_access") and raw.get("vexcel_tile"):  # agent skipped it: geometry is cached, add it
+        raw.setdefault("analyze_access", []).append({"args": {"building_id": run.building_id},
+                                                     "result": sources.analyze_access(run.building_id)})
     vx = {"tile": last("vexcel_tile"), "roof": last("vexcel_roof"), "footprint": last("vexcel_footprint"),
-          "analysis": aer[-1]["result"] if aer else {"error": "aerial image not analyzed"}, "obliques": obl}
+          "analysis": aer[-1]["result"] if aer else {"error": "aerial image not analyzed"}, "obliques": obl,
+          "access": last("analyze_access")}
     mp = {"model": last("matterport_model"), "panoramas": panos, "pano_analyses": analyses}
     ten = last("costar_tenants")
     prop = last("costar_property")
@@ -220,7 +227,7 @@ def save_replay(run: Run) -> None:
         pass
 
 
-VISION_TOOLS = {"analyze_aerial_image", "analyze_interior_image", "describe_image"}
+VISION_TOOLS = {"analyze_aerial_image", "analyze_interior_image", "describe_image", "analyze_access"}
 
 
 class Offline:
@@ -297,6 +304,7 @@ class Offline:
         if not ob.get("error") and ob.get("image_path"):
             await self.tool(a, "analyze_aerial_image", vision.analyze_aerial_image,
                             image_path=ob["image_path"], shows_facade=ob.get("shows_facade"))
+        acc = await self.tool(a, "analyze_access", sources.analyze_access, building_id=bid)
         bits = []
         t = (roof or {}).get("target") or {}
         if t:
@@ -305,6 +313,10 @@ class Offline:
         f = analysis.get("findings") or {}
         if f:
             bits.append(f"roof access: {condense((f.get('roof_access') or {}).get('value'), 14)}")
+        if isinstance(acc, dict) and not acc.get("error"):
+            ra = acc.get("roof_access") or {}
+            bits.append(f"ladder walls: {ra.get('short') or 'none verified'}; staging {'set' if acc.get('staging') else 'VERIFY ON SITE'}; "
+                        f"{len(acc.get('entries') or [])} entries mapped")
         return "; ".join(bits) or "Aerial analysis unavailable; access fields VERIFY ON SITE"
 
     async def interior(self, bid: str) -> str:

@@ -118,6 +118,11 @@ def make_tools(run: Run) -> dict[str, Any]:
                                   "Matterport panorama images for building_id (optional room_filter, limit): sweep_id, floor, room, scan, image_path."),
         "analyze_aerial_image": T(vision.analyze_aerial_image, "analyze_aerial_image",
                                   "Send an aerial image to the vision model with the canonical fire-preplan aerial question. For vexcel_tile results pass image_path AND preview_path + preview_scale. For obliques pass shows_facade. Returns roof_type, roof_access, staging, hydrants, exposures, access_roads with pixel bboxes + conf."),
+        "analyze_access": T(sources.analyze_access, "analyze_access",
+                            "Fire-apparatus access geometry for building_id from the Vexcel footprint + ortho + 4 obliques (vision model, verified): "
+                            "which footprint WALLS an aerial/ladder can reach (edges with side, reason, conf), a staging polygon on paved ground "
+                            "that does not overlap the building, and entry/exit doors (dock, roll-up, drive-in, entrance, exit) detected on the "
+                            "obliques and placed on the footprint, cross-checked with CoStar loading docks. Geometry is auto-saved; read only the summary.", 5000),
         "analyze_interior_image": T(vision.analyze_interior_image, "analyze_interior_image",
                                     "Send a Matterport panorama (local image_path) to the vision model to detect stairs, standpipes, alarm panel, FDC, electrical room, exits, roof structure, hazardous storage, with pixel bboxes + conf."),
         "describe_image": T(_describe, "describe_image",
@@ -164,7 +169,8 @@ def make_tools(run: Run) -> dict[str, Any]:
     return t
 
 
-_BULKY = ("ring", "wkt", "polygon", "georef", "raw", "defensible_space", "capture_window", "on_images")
+_BULKY = ("ring", "wkt", "polygon", "georef", "raw", "defensible_space", "capture_window", "on_images",
+          "px", "latlng", "candidate_edges", "also_seen", "entries_dropped", "calls", "validation", "annotated")
 
 
 def _llm_view(x: Any, depth: int = 0) -> Any:
@@ -209,7 +215,7 @@ def build_agent(run: Run):
          "system_prompt": _prompt("costar"), "tools": [t["costar_property"], t["costar_tenants"]],
          "model": sub_model, "middleware": fs("ls")},
         {"name": "aerial-analyst", "description": "Analyzes Vexcel aerial imagery + AI roof layer with the vision model: roof, access, staging, hydrants, exposures (auto-saved to /evidence/vexcel/).",
-         "system_prompt": _prompt("aerial"), "tools": [t["vexcel_roof"], t["vexcel_tile"], t["vexcel_oblique"], t["analyze_aerial_image"]],
+         "system_prompt": _prompt("aerial"), "tools": [t["vexcel_roof"], t["vexcel_tile"], t["vexcel_oblique"], t["analyze_aerial_image"], t["analyze_access"]],
          "model": sub_model, "middleware": fs("ls")},
         {"name": "interior-analyst", "description": "Analyzes the Matterport twin (rooms, tags, panoramas via vision model): stairs, elevators, utility rooms, fire protection, storage (auto-saved to /evidence/matterport/).",
          "system_prompt": _prompt("interior"), "tools": [t["matterport_model"], t["matterport_panoramas"], t["analyze_interior_image"]],

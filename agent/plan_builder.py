@@ -305,6 +305,7 @@ def access_section(aerial: dict, vx: dict | None = None) -> tuple[dict, list]:
     for key in ("roof_access", "staging", "hydrants", "access_roads"):
         node = f.get(key) or {}
         out[key] = _field(node.get("value"), _vx_cite(tile, node)) if node.get("value") else dict(V)
+    _access_geometry(out, (vx or {}).get("access"))
     exposures = []
     roof, _t = _roof_target(vx or {})
     for i, e in enumerate(roof.get("exposures") or []):
@@ -326,6 +327,63 @@ def access_section(aerial: dict, vx: dict | None = None) -> tuple[dict, list]:
             exposures.append({"side": e.get("side") or "?", "desc": e.get("desc") or e.get("value"),
                               "cite": _vx_cite(tile, e)})
     return out, exposures
+
+
+def _px_bbox(pts: list) -> list | None:
+    xs = [p[0] for p in pts if isinstance(p, (list, tuple))]
+    ys = [p[1] for p in pts if isinstance(p, (list, tuple))]
+    return [round(min(xs)), round(min(ys)), round(max(xs)), round(max(ys))] if xs else None
+
+
+def _access_geometry(out: dict, acc: dict | None) -> None:
+    """Overlay tools/access.py results: roof_access edges (footprint walls), staging polygon, entries.
+    The coarse ortho-survey roof_access/staging (one shared bbox) is replaced whenever the access
+    analysis actually checked that element; if it found nothing verified -> VERIFY ON SITE."""
+    if not _ok(acc):
+        return
+    base = acc.get("base") or {}
+    chk = acc.get("checked") or {}
+    img = {"image_url": base.get("image_url"), "img_w": base.get("img_w"), "img_h": base.get("img_h"),
+           "view": base.get("view"), "annotated_url": acc.get("annotated_url"), "annotated": acc.get("annotated")}
+
+    def cite(conf, bbox):
+        return {"src": "vexcel", "id": base.get("tile_id"), "conf": conf, "bbox": bbox, "url": base.get("image_url"),
+                "img_w": base.get("img_w"), "img_h": base.get("img_h"), "from": None}
+
+    ra, edges = acc.get("roof_access") or {}, acc.get("edges") or []
+    if ra.get("value") and edges:
+        out["roof_access"] = {
+            "value": ra["value"], "short": ra.get("short"),
+            "cite": cite(ra.get("conf"), _px_bbox([p for e in edges for p in e["px"]])),
+            "geometry": {"type": "edges", **img,
+                         "edges": [{k: e.get(k) for k in ("id", "side", "px", "latlng", "len_m", "conf", "reason", "verified")}
+                                   for e in edges]}}
+    elif chk.get("edges"):
+        out["roof_access"] = {**V, "note": "no footprint wall with verified apparatus access in aerial imagery"}
+    st = acc.get("staging")
+    if st and st.get("px"):
+        out["staging"] = {"value": st.get("value"), "cite": cite(st.get("conf"), _px_bbox(st["px"])),
+                          "geometry": {"type": "polygon", "px": st["px"], "latlng": st.get("latlng"), **img},
+                          "verified": st.get("verified")}
+    elif chk.get("staging"):
+        out["staging"] = {**V, "note": acc.get("staging_rejected") or "no verified staging area"}
+    ents = []
+    for e in acc.get("entries") or []:
+        c = dict(e.get("cite") or {})
+        c["conf"] = e.get("conf")
+        ents.append({"type": e.get("type"), "side": e.get("side"), "value": e.get("value"), "count": 1, "n": e.get("n"),
+                     "conf": e.get("conf"), "verified": e.get("verified"), "cite": c,
+                     "ortho_point": e.get("ortho_point"), "also_seen": e.get("also_seen")})
+    if ents:
+        out["entries"] = ents
+    elif chk.get("entries"):
+        out["entries"] = dict(V)
+    sm = acc.get("entries_summary")
+    if sm and sm.get("value"):
+        out["entries_summary"] = {"value": sm["value"], "cite": sm.get("cite"), "counts": sm.get("counts"),
+                                  "costar_loading_docks": sm.get("costar_loading_docks")}
+    elif chk.get("entries"):
+        out["entries_summary"] = dict(V)
 
 
 def interior_section(mp: dict) -> dict:
@@ -455,6 +513,8 @@ def build_plan(plan_id: str, building: dict, evidence: dict, mode: str = "offlin
         "media": {
             "aerial_url": _annotated(aerial["_tile"]) or aerial["_tile"].get("image_url"),
             "aerial_raw_url": aerial["_tile"].get("image_url"),
+            "access_annotated_url": _get(vx, "access", "annotated_url") if _ok(vx.get("access")) else None,
+            "access_obliques": _get(vx, "access", "oblique_annotated") if _ok(vx.get("access")) else None,
             "footprint": (vx.get("footprint") or {}).get("on_images") if _ok(vx.get("footprint")) else None,
             "obliques": [{"url": (o.get("tile") or {}).get("image_url"), "shows_facade": (o.get("tile") or {}).get("shows_facade")}
                          for o in vx.get("obliques") or [] if isinstance(o, dict)],

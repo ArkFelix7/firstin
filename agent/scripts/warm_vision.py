@@ -30,6 +30,11 @@ def main():
         if ob.get("image_path"):
             r = vision.analyze_aerial_image(ob["image_path"], shows_facade=ob.get("shows_facade"))
             print(bid, "oblique_N", r.get("error") or r.get("answer"))
+        from agent.tools import access
+
+        r = access.analyze_access(bid, allow_live=True)
+        print(bid, "access", r.get("error") or f"{len(r.get('edges') or [])} walls, staging={'yes' if r.get('staging') else 'no'}, "
+              f"{len(r.get('entries') or [])} entries, {r.get('secs')}s")
         panos = (sources.matterport_panoramas(bid, None, 12) or {}).get("panos") or []
         for p in pick_panos(panos, a.panos):
             r = vision.analyze_interior_image(p["image_path"])

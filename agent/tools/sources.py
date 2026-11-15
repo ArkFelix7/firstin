@@ -55,3 +55,8 @@ def vexcel_roof(building_id: str) -> dict:
 
 def vexcel_footprint(building_id: str) -> dict:
     return _call("vexcel", "vexcel_footprint", building_id)
+
+
+def analyze_access(building_id: str) -> dict:
+    """Ladder/aerial access edges, staging polygon and entry/exit points (tools/access.py)."""
+    return _call("access", "analyze_access", building_id)

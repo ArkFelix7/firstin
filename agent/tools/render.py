@@ -64,7 +64,7 @@ def _rows(plan: dict) -> list[tuple[str, str, str]]:
     add("Occupant load", occ.get("occupant_load_estimate"))
     acc = plan.get("access", {})
     for k, lab in (("roof_access", "Roof access"), ("staging", "Staging"), ("hydrants", "Hydrants"),
-                   ("access_roads", "Access roads")):
+                   ("access_roads", "Access roads"), ("entries_summary", "Entries/exits")):
         add(lab, acc.get(k))
     it = plan.get("interior", {})
     st = it.get("stairwells")

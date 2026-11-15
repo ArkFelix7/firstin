@@ -33,6 +33,8 @@ Each module reads from `agent/cache/<source>/...` first (offline-safe), then liv
   - `matterport_panoramas(building_id: str, room_filter: str | None = None, limit: int = 6) -> dict` → {panos: [{sweep_id, floor, room, image_path, image_url, position}], cite}
 - `tools/vision.py`
   - `describe_image(image_path: str, question: str) -> dict` → VLM (Anthropic claude, model from env FIRSTIN_MODEL, default `claude-sonnet-5-5`) answer with detections [{label, bbox, conf}]. Falls back to cached answer in `agent/cache/vision/` keyed by sha1(image+question).
+- `tools/access.py`
+  - `analyze_access(building_id) -> dict` → {roof_access {value, short, conf}, edges [{id, side, px:[[x,y],[x,y]], latlng, len_m, conf, reason, verified}], staging {value, px, latlng, conf, verified} | null, entries [{n, type: dock_door|drive_in|rollup|entrance|exit, side, value, conf, cite {src: vexcel, id: oblique tile, bbox, img_w, img_h, url}, ortho_point {px, latlng, approx: true}}], entries_summary, base {view, tile_id, image_url, img_w, img_h}, annotated_url, oblique_annotated}. `px` = full-res pixels of `base.image_url` (ortho, or context when the footprint does not fit). 4 cached VLM calls (edges, staging, entries on the 4 obliques, verification). Plan: `access.roof_access.geometry` (type edges), `access.staging.geometry` (type polygon), `access.entries[]`, `access.entries_summary`, `media.access_annotated_url`.
 - `tools/render.py`: `render_html(plan) -> path`, `render_pdf(plan) -> path`, `tts_brief(text) -> mp3 path` (macOS `say` → aiff→mp3 via ffmpeg fallback ok)
 - `tools/publish.py`: `publish_preplan(plan_id) -> dict` (HITL-gated in agent)
 

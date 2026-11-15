@@ -8,7 +8,9 @@ HackPrinceton Fall 2026. Tracks: CoStar *AI for the Built World*, LangChain *Bes
 
 ## Why
 
-Pre-plans tell crews where the stairs, standpipes, hazards and roof access are before they go in. Departments document coverage of only a fraction of their buildings: Plano 1,087 of 2,345 and New Castle County 1,200 of 6,000, per FEMA EFO papers. After the 2007 Charleston Sofa Super Store fire killed nine firefighters, NIOSH noted that the store's pre-plan "did not note any unusual hazards." The forms are already digital. Collecting the data is the bottleneck, and that is what FirstIn automates.
+Pre-plans tell crews where the stairs, standpipes, hazards and roof access are before they go in. Departments document coverage of only a fraction of their buildings: Plano 1,087 of 2,345 and North Charleston 1,200 of 6,000, per FEMA Executive Fire Officer papers. NIOSH said it plainly in a 2025 line-of-duty-death report: "many fire departments are unable to pre-plan for all the structures within their jurisdiction" (F2023-07). In another, a firefighter died in a warehouse where "no pre-incident plan was available for crews to view enroute or on arrival" (F2025-09).
+
+Pre-planning platforms already exist, and some pre-fill parcel fields from assessor records. What still needs a site visit is the building itself: the interior, the roof, the tenants and what they store. FirstIn fills those fields from data that already exists, with a citation on each, before anyone visits.
 
 ## What it does
 

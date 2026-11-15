@@ -262,7 +262,7 @@ export default function InCab() {
           <div className="mt-[2vh] grid shrink-0 grid-cols-[1fr_1fr_2.4fr] divide-x divide-line border-y border-line">
             <Stat label="Stories" value={s.stories ?? "Verify on site"} />
             <Stat label="Built" value={s.year_built ?? "Verify on site"} />
-            <Stat label="Construction" value={s.construction ? clean(s.construction) : "Verify on site"} sub={s.construction_detail && s.construction_detail !== s.construction ? clean(s.construction_detail) : undefined} small />
+            <Stat label="Construction" value={s.construction ? clean(s.construction) : "Verify on site"} sub={s.construction_detail && s.construction && !s.construction_detail.toLowerCase().startsWith(s.construction.toLowerCase()) ? clean(s.construction_detail) : undefined} small />
           </div>
 
           {/* Hazards and egress */}

@@ -42,6 +42,7 @@ class PreplanReq(BaseModel):
     building_id: str | None = None
     address: str | None = None
     mode: str | None = None  # "offline" | "agent" (override; default from env/key)
+    notify: bool = True  # false: do not text the officer (Photon /notify) for this run (automated/test runs)
 
 
 class ApproveReq(BaseModel):
@@ -119,8 +120,9 @@ async def preplan(req: PreplanReq):
     if mode == "agent" and not config.has_api_key():
         mode = "offline"
     run = new_run(b, mode)
+    run.extra["notify"] = bool(req.notify)
     run.task = asyncio.create_task(_drive(run))
-    return {"run_id": run.run_id, "mode": mode, "stream_url": f"/stream/{run.run_id}"}
+    return {"run_id": run.run_id, "mode": mode, "notify": run.extra["notify"], "stream_url": f"/stream/{run.run_id}"}
 
 
 def _run(run_id: str) -> Run:
@@ -210,13 +212,14 @@ def incab_active(request: Request):
     if not s:
         raise HTTPException(404, "no approved plan yet")
     s = no_dash(dict(s))
-    if "top_hazards_detail" not in s:
-        p = publish_mod.load_plan(str(s.get("plan_id")))
-        if p:
-            from .plan_builder import top_hazards_detail
+    p = publish_mod.load_plan(str(s.get("plan_id")))
+    if p:  # recompute from the plan: distinct (merged) hazards; never an era-inferred construction
+        from .plan_builder import _era_only_construction, top_hazards_detail
 
-            s["top_hazards_detail"] = top_hazards_detail(p)
-            s["top_hazards"] = top_hazards(p)
+        s["top_hazards_detail"] = top_hazards_detail(p)
+        s["top_hazards"] = top_hazards(p)
+        if _era_only_construction((p.get("building") or {}).get("construction")):
+            s["construction"] = s["construction_detail"] = VERIFY
     for k in ("audio_url", "pdf_url", "html_url"):
         s[k] = _abs(request, s.get(k))
     return s

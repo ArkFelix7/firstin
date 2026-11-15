@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FirstIn: know the building before you're inside it</title>
+<meta name="viewport" content="width=1920, height=1080">
+<style id="fonts">/*FONTS*/</style>
+<style>
+  html, body { margin: 0; padding: 0; background: #f4f2ee; }
+  body { width: 1920px; height: 1080px; overflow: hidden; }
+  svg { display: block; }
+  /* Animated groups rotate/scale around their local origin (0,0); pivots are set with wrapper translates. */
+  .a { transform-box: view-box; transform-origin: 0 0; }
+  text { font-family: "Inter", system-ui, -apple-system, "Helvetica Neue", sans-serif; }
+</style>
+</head>
+<body>
+<svg id="stage" width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- fire -->
+    <linearGradient id="gOuter" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#d4501c"/>
+      <stop offset="0.45" stop-color="#ec7424"/>
+      <stop offset="1" stop-color="#f59a32"/>
+    </linearGradient>
+    <linearGradient id="gMid" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#ef8a26"/>
+      <stop offset="0.6" stop-color="#f7ae3c"/>
+      <stop offset="1" stop-color="#fbc65a"/>
+    </linearGradient>
+    <radialGradient id="gCore" cx="0.5" cy="0.78" r="0.62">
+      <stop offset="0" stop-color="#fffbe8"/>
+      <stop offset="0.55" stop-color="#ffecb0"/>
+      <stop offset="1" stop-color="#fdd77a"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f39236" stop-opacity="0.34"/>
+      <stop offset="0.4" stop-color="#f39236" stop-opacity="0.13"/>
+      <stop offset="0.7" stop-color="#f39236" stop-opacity="0.04"/>
+      <stop offset="0.88" stop-color="#f39236" stop-opacity="0.01"/>
+      <stop offset="1" stop-color="#f39236" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="roofGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f7a447" stop-opacity="0.75"/>
+      <stop offset="0.5" stop-color="#f7a447" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#f7a447" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="faceWarm" gradientUnits="userSpaceOnUse" x1="20" y1="0" x2="70" y2="0">
+      <stop offset="0" stop-color="#f08a2a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#f08a2a" stop-opacity="0.42"/>
+    </linearGradient>
+    <radialGradient id="floor" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#1c1915" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#1c1915" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="screenClip"><rect x="0" y="0" width="200" height="138" rx="4"/></clipPath>
+    <clipPath id="roofClip"><path d="M294 -458 L546 -458 L585 -480 L333 -480 Z"/></clipPath>
+
+    <!-- soft, turbulent smoke -->
+    <filter id="smokeF" filterUnits="userSpaceOnUse" x="-200" y="-500" width="600" height="600">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018 0.032" numOctaves="2" seed="4" result="n">
+        <animate attributeName="baseFrequency" dur="2.4s" values="0.018 0.032;0.022 0.026;0.018 0.032" repeatCount="indefinite"/>
+      </feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="30" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feGaussianBlur in="d" stdDeviation="6.5"/>
+    </filter>
+    <filter id="puffF" filterUnits="userSpaceOnUse" x="-200" y="-400" width="700" height="500">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="22" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feGaussianBlur in="d" stdDeviation="7"/>
+    </filter>
+    <filter id="breathF" filterUnits="userSpaceOnUse" x="0" y="-700" width="500" height="400">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035 0.06" numOctaves="2" seed="2" result="n">
+        <animate attributeName="baseFrequency" dur="0.9s" values="0.035 0.06;0.042 0.05;0.035 0.06" repeatCount="indefinite"/>
+      </feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="12" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feGaussianBlur in="d" stdDeviation="5"/>
+    </filter>
+    <filter id="shimmerF" filterUnits="userSpaceOnUse" x="-120" y="-260" width="240" height="290">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02 0.07" numOctaves="1" seed="1" result="n">
+        <animate attributeName="seed" dur="0.6s" values="1;2;3;4;5;6" calcMode="discrete" repeatCount="indefinite"/>
+      </feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="emberF" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="0.8"/></filter>
+  </defs>
+
+  <rect width="1920" height="1080" fill="#f4f2ee"/>
+
+  <!-- Camera: settles (slight scale + lift) when the title arrives -->
+  <g transform="translate(960 470)">
+   <g id="camera" class="a">
+    <g transform="translate(-960 -470)">
+
+    <!-- floor -->
+    <line x1="300" y1="830" x2="1620" y2="830" stroke="#e2ded7" stroke-width="2"/>
+
+    <!-- ===== Desk + building model ===== -->
+    <g transform="translate(680 830)">
+      <g id="model">
+        <ellipse cx="415" cy="2" rx="290" ry="15" fill="url(#floor)"/>
+        <!-- desk -->
+        <rect x="166" y="-236" width="14" height="236" rx="3" fill="#a59c90"/>
+        <rect x="650" y="-236" width="14" height="236" rx="3" fill="#a59c90"/>
+        <rect x="204" y="-236" width="10" height="212" rx="3" fill="#bdb5aa"/>
+        <rect x="616" y="-236" width="10" height="212" rx="3" fill="#bdb5aa"/>
+        <rect x="150" y="-252" width="530" height="18" rx="4" fill="#b7aea2"/>
+        <rect x="150" y="-252" width="530" height="5" rx="2.5" fill="#c9c1b6"/>
+
+        <!-- building model, scaled 1.3 -->
+        <g transform="translate(-70 129.6) scale(1.3)">
+          <g transform="translate(30 0)">
+            <path d="M232 -300 L468 -300 L500 -318 L264 -318 Z" fill="#e8e4dd"/>
+            <rect x="232" y="-300" width="236" height="8" fill="#d9d4cb"/>
+            <path d="M468 -300 L500 -318 L500 -310 L468 -292 Z" fill="#cbc5bb"/>
+            <path d="M444 -452 L474 -469 L474 -318 L444 -301 Z" fill="#bfb8ad"/>
+            <rect x="250" y="-452" width="194" height="151" fill="#dcd7cf"/>
+            <rect x="250" y="-452" width="194" height="7" fill="#cfc9bf"/>
+            <path d="M250 -452 L444 -452 L474 -469 L280 -469 Z" fill="#ece8e2"/>
+            <path d="M250 -452 L444 -452 L474 -469 L280 -469 Z" fill="none" stroke="#cfc9bf" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M412 -460 L434 -460 L440 -464 L418 -464 Z" fill="#cfc9bf"/>
+            <g fill="#a9a196">
+              <rect x="266" y="-430" width="26" height="16" rx="2"/><rect x="304" y="-430" width="26" height="16" rx="2"/>
+              <rect x="342" y="-430" width="26" height="16" rx="2"/><rect x="380" y="-430" width="26" height="16" rx="2"/>
+              <rect x="418" y="-430" width="16" height="16" rx="2"/>
+              <rect x="266" y="-396" width="26" height="16" rx="2"/><rect x="304" y="-396" width="26" height="16" rx="2"/>
+              <rect x="342" y="-396" width="26" height="16" rx="2"/><rect x="380" y="-396" width="26" height="16" rx="2"/>
+              <rect x="418" y="-396" width="16" height="16" rx="2"/>
+            </g>
+            <rect x="266" y="-358" width="40" height="57" rx="2" fill="#b9b2a7" stroke="#a9a196" stroke-width="1.5"/>
+            <g stroke="#ada599" stroke-width="1.5"><line x1="268" y1="-346" x2="304" y2="-346"/><line x1="268" y1="-334" x2="304" y2="-334"/><line x1="268" y1="-322" x2="304" y2="-322"/><line x1="268" y1="-310" x2="304" y2="-310"/></g>
+            <rect x="318" y="-358" width="40" height="57" rx="2" fill="#b9b2a7" stroke="#a9a196" stroke-width="1.5"/>
+            <g stroke="#ada599" stroke-width="1.5"><line x1="320" y1="-346" x2="356" y2="-346"/><line x1="320" y1="-334" x2="356" y2="-334"/><line x1="320" y1="-322" x2="356" y2="-322"/><line x1="320" y1="-310" x2="356" y2="-310"/></g>
+            <rect x="398" y="-344" width="22" height="43" rx="2" fill="#8f877c"/>
+          </g>
+        </g>
+
+        <!-- warm light from the fire: ambient + on the roof -->
+        <g id="fireLight">
+          <circle cx="374" cy="-520" r="230" fill="url(#glow)"/>
+          <g clip-path="url(#roofClip)"><ellipse cx="374" cy="-470" rx="120" ry="30" fill="url(#roofGlow)"/></g>
+        </g>
+
+        <!-- the fire (campfire-size), base on the roof -->
+        <g transform="translate(374 -468)">
+          <g id="fireIn" class="a">
+            <g id="fireBend" class="a">
+              <g id="fire" filter="url(#shimmerF)"></g>
+            </g>
+          </g>
+          <!-- embers rising while it burns -->
+          <g id="embers"></g>
+          <!-- sparks blown away when it goes out -->
+          <g id="sparks"></g>
+          <!-- displaced puff -->
+          <g filter="url(#puffF)">
+            <g id="puff"></g>
+          </g>
+          <!-- smoke column -->
+          <g filter="url(#smokeF)">
+            <g id="smoke"></g>
+          </g>
+        </g>
+      </g>
+    </g>
+
+    <!-- ===== Breath stream (world coords at the lean pose) ===== -->
+    <g transform="translate(680 830)" filter="url(#breathF)" fill="none" stroke-linecap="round">
+      <path class="breath" d="M172 -492 C220 -498 276 -506 338 -510" stroke="#d8dce1" stroke-width="22"/>
+      <path class="breath" d="M174 -484 C226 -486 282 -490 342 -492" stroke="#cdd2d8" stroke-width="12"/>
+      <path class="breath" d="M172 -476 C220 -472 270 -474 330 -480" stroke="#d8dce1" stroke-width="16"/>
+    </g>
+
+    <!-- ===== Firefighter (facing right, origin at feet) ===== -->
+    <g transform="translate(680 830)">
+     <ellipse cx="10" cy="2" rx="150" ry="14" fill="url(#floor)" id="ffShadow" class="a"/>
+     <g id="walk" class="a">
+      <g id="bob" class="a">
+      <!-- back leg -->
+      <g transform="translate(-20 -250)"><g id="legB" class="a"><g transform="translate(20 250)">
+        <rect x="-46" y="-262" width="52" height="226" rx="14" fill="#a8956f"/>
+        <rect x="-46" y="-108" width="52" height="14" fill="#e3ddcf"/>
+        <path d="M-48 -52 L4 -52 L6 -14 L20 -12 Q26 -10 26 -4 L26 0 L-48 0 Z" fill="#2b2825"/>
+      </g></g></g>
+      <!-- front leg -->
+      <g transform="translate(14 -250)"><g id="legF" class="a"><g transform="translate(-14 250)">
+        <rect x="-14" y="-262" width="56" height="226" rx="14" fill="#bba77f"/>
+        <rect x="-14" y="-108" width="56" height="14" fill="#efe9dc"/>
+        <path d="M-16 -52 L40 -52 L42 -16 L66 -12 Q74 -10 74 -4 L74 0 L-16 0 Z" fill="#34302c"/>
+      </g></g></g>
+
+      <!-- upper body: pivot at hips -->
+      <g transform="translate(0 -244)">
+       <g id="lean" class="a">
+        <g id="breathe" class="a">
+        <g transform="translate(0 244)">
+
+          <!-- far arm (behind coat): rests at the side, later braces on the desk edge -->
+          <path id="farArm" d="M-6 -452 L-4 -356 L50 -334" fill="none" stroke="#a8956f" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+          <g id="farHand" class="a" style="transform: translate(50px,-334px)">
+            <rect x="-18" y="-16" width="38" height="30" rx="13" fill="#2b2825"/>
+          </g>
+
+          <!-- coat: chest -->
+          <path d="M-58 -470 Q-80 -380 -76 -330 L76 -330 Q78 -380 52 -470 Q0 -490 -58 -470 Z" fill="#c6b087"/>
+          <path d="M40 -472 Q62 -400 68 -330 L76 -330 Q78 -380 52 -470 Z" fill="#b39c73"/>
+          <!-- coat: skirt with reflective bands, sways a little -->
+          <g transform="translate(0 -336)"><g id="skirt" class="a"><g transform="translate(0 336)">
+            <path d="M-77 -340 L77 -340 Q76 -280 74 -228 Q0 -220 -74 -228 Q-77 -280 -77 -340 Z" fill="#c6b087"/>
+            <path d="M68 -340 L77 -340 Q76 -280 74 -228 L67 -228 Q68 -280 68 -340 Z" fill="#b39c73"/>
+            <path d="M-77 -318 Q0 -312 77 -318 L77 -298 Q0 -292 -77 -298 Z" fill="#efeadf"/>
+            <path d="M-76 -264 Q0 -258 75 -264 L75 -246 Q0 -240 -76 -246 Z" fill="#efeadf"/>
+          </g></g></g>
+          <!-- collar -->
+          <path d="M-34 -500 Q0 -508 36 -498 L42 -466 Q0 -458 -40 -466 Z" fill="#3b3733"/>
+
+          <!-- head: pivot at neck -->
+          <g transform="translate(6 -490)">
+           <g id="head" class="a">
+            <g transform="translate(-6 490)">
+              <path d="M-40 -500 Q-50 -560 -14 -584 Q30 -598 52 -566 L56 -510 Q30 -496 -40 -500 Z" fill="#46413c"/>
+              <path d="M18 -572 Q44 -576 56 -556 L60 -546 L68 -532 Q70 -528 64 -526 L61 -524 Q62 -512 54 -504 Q42 -496 22 -500 Q12 -536 18 -572 Z" fill="#d6b096"/>
+              <path d="M18 -572 Q12 -536 22 -500 Q16 -500 14 -504 Q6 -536 12 -570 Z" fill="#c29b82"/>
+              <!-- warm firelight on the face -->
+              <g id="faceLight">
+                <path d="M18 -572 Q44 -576 56 -556 L60 -546 L68 -532 Q70 -528 64 -526 L61 -524 Q62 -512 54 -504 Q42 -496 22 -500 Q12 -536 18 -572 Z" fill="url(#faceWarm)"/>
+              </g>
+              <rect x="42" y="-551" width="7" height="3.6" rx="1.8" fill="#2a2522"/>
+              <rect x="38" y="-560" width="14" height="2.6" rx="1.3" fill="#7d6352" opacity="0.7"/>
+              <path d="M-50 -566 Q-50 -628 6 -632 Q58 -632 64 -572 Z" fill="#2f2b28"/>
+              <path d="M-30 -600 Q-10 -626 20 -628" fill="none" stroke="#45403b" stroke-width="5" stroke-linecap="round"/>
+              <path d="M42 -616 Q56 -612 60 -596 L56 -578 Q46 -582 40 -590 Z" fill="#2554c7"/>
+              <path d="M36 -628 Q70 -620 74 -588 L68 -584 Q62 -612 32 -620 Z" fill="#a9bbd8" opacity="0.75"/>
+              <path d="M-102 -552 Q-74 -566 -48 -566 L70 -572 Q78 -570 76 -564 Q72 -560 64 -560 L-46 -556 Q-72 -554 -100 -544 Q-108 -546 -102 -552 Z" fill="#23201e"/>
+            </g>
+           </g>
+          </g>
+
+          <!-- near arm + tablet: pivot at the shoulder -->
+          <g transform="translate(4 -452)">
+           <g id="arm" class="a">
+            <g transform="translate(-4 452)">
+              <path d="M4 -452 L14 -352" fill="none" stroke="#bfa980" stroke-width="44" stroke-linecap="round"/>
+              <g transform="translate(14 -352)"><g id="fore" class="a"><g transform="translate(-14 352)">
+              <path d="M14 -352 L86 -372" fill="none" stroke="#bfa980" stroke-width="44" stroke-linecap="round"/>
+              <path d="M58 -364 L72 -368" stroke="#efeadf" stroke-width="44" stroke-linecap="butt"/>
+              <g transform="translate(88 -376)"><g id="tab" class="a"><g transform="translate(-88 376)">
+              <!--TABLET-->
+              <rect x="70" y="-394" width="34" height="38" rx="14" fill="#2f2b28"/>
+              <rect x="94" y="-392" width="12" height="20" rx="6" fill="#3b3733"/>
+              </g></g></g>
+              </g></g></g>
+            </g>
+           </g>
+          </g>
+        </g>
+        </g>
+       </g>
+      </g>
+      </g>
+     </g>
+    </g>
+
+    </g>
+   </g>
+  </g>
+
+  <!-- ===== Title ===== -->
+  <g id="title" opacity="0">
+    <g transform="translate(960 880)">
+      <g id="titleInner" class="a">
+        <g id="logo" transform="translate(-196 -47)">
+          <rect width="58" height="58" rx="12" fill="#16191d"/>
+          <path d="M14.5 39.2 L29 18.9 L43.5 39.2" fill="none" stroke="#fff" stroke-width="5.8" stroke-linejoin="round" stroke-linecap="round"/>
+          <path d="M23.2 45 H34.8" stroke="#c4433b" stroke-width="5.8" stroke-linecap="round"/>
+        </g>
+        <text id="wordmark" x="-120" y="2" font-size="64" font-weight="600" fill="#16191d" letter-spacing="-1.6">FirstIn</text>
+        <text x="0" y="66" font-size="32" font-weight="400" fill="#4a525c" text-anchor="middle" letter-spacing="-0.2">Know the building before you&#8217;re inside it.</text>
+      </g>
+    </g>
+  </g>
+</svg>
+
+<script>
+(() => {
+  const TOTAL = 5000;
+  const NS = "http://www.w3.org/2000/svg";
+  const anims = [];
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
+  const EASE = "cubic-bezier(0.45, 0, 0.25, 1)";   // gentle in-out
+  const OUT = "cubic-bezier(0.22, 1, 0.36, 1)";     // soft settle
+  const IN = "cubic-bezier(0.5, 0, 0.75, 0)";
+  const el = (tag, attrs, parent) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+
+  // Timeline track: frames are [timeMs, props, easingToNext?]
+  function track(target, frames, ease = EASE) {
+    if (!target) return;
+    const kf = frames.map(([t, props, e]) => Object.assign({ offset: t / TOTAL, easing: e || ease }, props));
+    if (kf[0].offset > 0) kf.unshift(Object.assign({}, kf[0], { offset: 0 }));
+    if (kf[kf.length - 1].offset < 1) kf.push(Object.assign({}, kf[kf.length - 1], { offset: 1 }));
+    anims.push(target.animate(kf, { duration: TOTAL, fill: "both" }));
+  }
+  function loop(target, frames, duration, phase = 0, direction = "alternate") {
+    anims.push(target.animate(frames, { duration, iterations: Infinity, delay: -phase, easing: "ease-in-out", direction }));
+  }
+  const rot = (d) => ({ transform: `rotate(${d}deg)` });
+
+  // ---------- Build the fire ----------
+  // Teardrop tongue of height h and half-width w, base at (0,0)
+  const tongue = (h, w, lean = 0) =>
+    `M0 0 C${-w} 0 ${-w * 1.12} ${-h * 0.3} ${-w * 0.62 + lean * 0.3} ${-h * 0.55} ` +
+    `C${-w * 0.28 + lean * 0.6} ${-h * 0.76} ${-w * 0.05 + lean * 0.9} ${-h * 0.86} ${lean} ${-h} ` +
+    `C${w * 0.2 + lean * 0.8} ${-h * 0.8} ${w * 0.38 + lean * 0.5} ${-h * 0.7} ${w * 0.66 + lean * 0.3} ${-h * 0.5} ` +
+    `C${w * 1.12} ${-h * 0.28} ${w} 0 0 0 Z`;
+  const fire = $("#fire");
+  // [x, h, w, lean, fill, flicker period, phase]
+  const tongues = [
+    [-34, 62, 22, -8, "url(#gOuter)", 620, 100],
+    [36, 70, 22, 8, "url(#gOuter)", 700, 300],
+    [-18, 104, 32, -6, "url(#gOuter)", 820, 0],
+    [20, 112, 32, 7, "url(#gOuter)", 760, 420],
+    [0, 150, 42, 2, "url(#gOuter)", 940, 200],
+    [-10, 92, 30, -3, "url(#gMid)", 680, 250],
+    [12, 84, 28, 4, "url(#gMid)", 600, 500],
+    [0, 58, 22, 0, "url(#gCore)", 520, 150],
+  ];
+  tongues.forEach(([x, h, w, lean, fill, per, ph], i) => {
+    const g0 = el("g", { transform: `translate(${x} 0)` }, fire);
+    const g = el("g", { class: "a" }, g0);
+    el("path", { d: tongue(h, w, lean), fill }, g);
+    const a = 0.05 + (i % 3) * 0.02, sk = 3 + (i % 2) * 2;
+    loop(g, [
+      { transform: "scale(1, 1) skewX(0deg)" },
+      { transform: `scale(${1 - a}, ${1 + a * 1.8}) skewX(${-sk}deg)` },
+      { transform: `scale(${1 + a * 0.6}, ${1 - a}) skewX(${sk * 0.7}deg)` },
+      { transform: `scale(${1 - a * 0.4}, ${1 + a}) skewX(${-sk * 0.4}deg)` },
+    ], per, ph);
+  });
+  // glowing bed at the base
+  el("ellipse", { cx: 0, cy: -4, rx: 50, ry: 9, fill: "#e0611f" }, fire);
+  el("ellipse", { cx: 0, cy: -6, rx: 30, ry: 5, fill: "#f6a83c" }, fire);
+
+  // Embers: tiny sparks rising while it burns
+  const embers = $("#embers");
+  [[-14, 900, 0, 18], [16, 1100, 400, -14], [4, 1300, 800, 10]].forEach(([x, per, ph, drift]) => {
+    const c = el("circle", { cx: x, cy: -90, r: 2.6, fill: "#f8b54a", filter: "url(#emberF)", class: "a" }, embers);
+    anims.push(c.animate([
+      { transform: "translate(0px, 0px)", opacity: 0 },
+      { transform: `translate(${drift * 0.3}px, -30px)`, opacity: 1, offset: 0.2 },
+      { transform: `translate(${drift}px, -110px)`, opacity: 0 },
+    ], { duration: per, iterations: Infinity, delay: -ph, easing: "cubic-bezier(0.2,0.6,0.4,1)" }));
+  });
+
+  // Sparks blown away from the firefighter at the moment it goes out
+  const sparks = $("#sparks");
+  [[-10, -60, 150, -70], [6, -40, 190, -30], [0, -80, 120, -120], [-6, -30, 210, -6], [8, -70, 170, -95]].forEach(([x, y, dx, dy], i) => {
+    const c = el("circle", { cx: x, cy: y, r: i % 2 ? 2.4 : 3, fill: "#f6a23a", filter: "url(#emberF)", class: "a", opacity: 0 }, sparks);
+    const s = 2700 + i * 35;
+    track(c, [
+      [0, { transform: "translate(0px,0px)", opacity: 0 }],
+      [s, { transform: "translate(0px,0px)", opacity: 0 }, "cubic-bezier(0.15,0.7,0.35,1)"],
+      [s + 90, { opacity: 1 }],
+      [s + 650, { transform: `translate(${dx}px,${dy}px)`, opacity: 0 }],
+    ]);
+  });
+
+  // Puff of displaced smoke, blown away (to the right)
+  const puff = $("#puff");
+  [[0, -50, 30, 18, 80, -40], [10, -80, 24, 16, 105, -75], [-6, -34, 26, 14, 70, -16]].forEach(([x, y, rx, ry, dx, dy], i) => {
+    const e = el("ellipse", { cx: x, cy: y, rx, ry, fill: "#a39c92", class: "a" }, puff);
+    const s = 2760 + i * 60;
+    track(e, [
+      [0, { transform: `translate(0px,0px) scale(0.3)`, fillOpacity: 0 }],
+      [s, { transform: `translate(0px,0px) scale(0.3)`, fillOpacity: 0 }, "cubic-bezier(0.2,0.6,0.35,1)"],
+      [s + 160, { fillOpacity: 0.32 }],
+      [s + 800, { transform: `translate(${dx}px,${dy}px) scale(1.9)`, fillOpacity: 0 }],
+    ]);
+    e.style.transformBox = "fill-box"; e.style.transformOrigin = "50% 50%";
+  });
+
+  // Smoke column: several soft wisps that rise, widen, drift with the breath and dissipate
+  const smoke = $("#smoke");
+  const wisps = [
+    // [d, width, color, start, peak opacity, rise, drift, widen]
+    ["M0 -2 C10 -40 -12 -70 4 -110 C18 -146 -6 -176 12 -214", 16, "#9f988e", 2880, 0.36, 60, 36, 1.8],
+    ["M-4 -2 C-18 -46 8 -80 -6 -120 C-16 -150 6 -180 -2 -206", 10, "#968f85", 2960, 0.32, 70, 26, 1.6],
+    ["M6 -2 C20 -36 2 -66 18 -98 C30 -126 16 -160 30 -190", 24, "#b3ada4", 3060, 0.24, 80, 56, 2.2],
+    ["M0 -2 C6 -26 -6 -48 2 -72 C8 -92 -2 -112 6 -136", 7, "#8f887e", 3180, 0.36, 90, 30, 1.5],
+    ["M-2 -2 C10 -30 -10 -56 4 -84 C14 -104 2 -128 10 -150", 30, "#bab4ab", 3300, 0.18, 90, 60, 2.5],
+    ["M0 -2 C4 -16 -4 -30 2 -46", 12, "#a8a197", 3000, 0.3, 20, 10, 1.3],
+  ];
+  wisps.forEach(([d, w, color, s, peak, rise, drift, widen]) => {
+    const g = el("g", { class: "a" }, smoke);
+    const p = el("path", { d, fill: "none", stroke: color, "stroke-width": w, "stroke-linecap": "round", "stroke-opacity": 0 }, g);
+    const len = p.getTotalLength();
+    p.setAttribute("stroke-dasharray", `${len} ${len}`);
+    track(p, [
+      [0, { strokeDashoffset: len, strokeOpacity: 0 }],
+      [s, { strokeDashoffset: len, strokeOpacity: 0 }, "cubic-bezier(0.25,0.5,0.4,1)"],
+      [s + 260, { strokeOpacity: peak }],
+      [s + 700, { strokeDashoffset: 0, strokeOpacity: peak * 0.8 }, "cubic-bezier(0.4,0,0.6,1)"],
+      [s + 1500, { strokeDashoffset: -len * 0.55, strokeOpacity: 0 }],
+    ]);
+    track(g, [
+      [0, { transform: "translate(0px,0px) scale(1,1)" }],
+      [s, { transform: "translate(0px,0px) scale(1,1)" }, "cubic-bezier(0.3,0.3,0.5,1)"],
+      [s + 1500, { transform: `translate(${drift}px,${-rise}px) scale(${widen},1.15)` }],
+    ]);
+  });
+
+  // ---------- Timeline ----------
+  // 0.0-1.0 s  Entrance: three steps in with a slight bob; the model fades in, the fire catches
+  track($("#walk"), [
+    [0, { transform: "translateX(-330px)" }, "cubic-bezier(0.25,0.4,0.35,1)"],
+    [960, { transform: "translateX(0px)" }],
+  ]);
+  track($("#ffShadow"), [
+    [0, { transform: "translateX(-330px)" }, "cubic-bezier(0.25,0.4,0.35,1)"],
+    [960, { transform: "translateX(0px)" }],
+  ]);
+  track($("#bob"), [
+    [0, { transform: "translateY(0px)" }, "ease-out"], [160, { transform: "translateY(-8px)" }, "ease-in"],
+    [320, { transform: "translateY(0px)" }, "ease-out"], [480, { transform: "translateY(-8px)" }, "ease-in"],
+    [640, { transform: "translateY(0px)" }, "ease-out"], [800, { transform: "translateY(-5px)" }, "ease-in"],
+    [960, { transform: "translateY(1.5px)" }, "ease-out"], [1120, { transform: "translateY(0px)" }],
+  ]);
+  track($("#legF"), [[0, rot(-16)], [320, rot(14)], [640, rot(-12)], [960, rot(1.5)], [1120, rot(0)]]);
+  track($("#legB"), [[0, rot(14)], [320, rot(-16)], [640, rot(11)], [960, rot(-1.5)], [1120, rot(0)]]);
+
+  // Upper body: walk lean, settle, glance, breath in (lean back), committed lean in with overshoot, recover
+  track($("#lean"), [
+    [0, rot(4)], [900, rot(4)], [1120, rot(-1.2)], [1320, rot(0)],
+    [1950, rot(0)], [2330, rot(-4)],
+    [2560, rot(24)], [2700, rot(21.5)], [2820, rot(22)],
+    [3150, rot(22)], [3520, rot(-2)], [3720, rot(0.5)], [3860, rot(0)],
+  ]);
+  track($("#breathe"), [
+    [0, { transform: "translateY(0px) scale(1)" }],
+    [1950, { transform: "translateY(0px) scale(1)" }],
+    [2330, { transform: "translateY(-6px) scale(1.012)" }],
+    [2600, { transform: "translateY(1px) scale(0.995)" }],
+    [3150, { transform: "translateY(2px) scale(0.99)" }],
+    [3600, { transform: "translateY(0px) scale(1)" }],
+  ]);
+  track($("#skirt"), [
+    [0, { transform: "skewX(3deg)" }], [320, { transform: "skewX(-3deg)" }], [640, { transform: "skewX(3deg)" }],
+    [960, { transform: "skewX(-2deg)" }], [1180, { transform: "skewX(1deg)" }], [1400, { transform: "skewX(0deg)" }],
+    [2330, { transform: "skewX(0deg)" }], [2620, { transform: "skewX(-4deg)" }], [2860, { transform: "skewX(1.5deg)" }],
+    [3050, { transform: "skewX(0deg)" }], [3520, { transform: "skewX(3deg)" }], [3780, { transform: "skewX(-1deg)" }],
+    [3950, { transform: "skewX(0deg)" }],
+  ]);
+
+  // Head: glance down at the tablet, look up at the fire, helmet tips with the lean, then a small nod
+  track($("#head"), [
+    [0, rot(0)], [1250, rot(0)], [1520, rot(20)], [1620, rot(18)], [1780, rot(18)],
+    [2000, rot(-5)], [2330, rot(-6)],
+    [2560, rot(6)], [2720, rot(3)], [3150, rot(3)],
+    [3520, rot(-1)], [3700, rot(0)],
+    [3860, rot(10)], [4020, rot(-1)], [4140, rot(0)],
+  ]);
+
+  // Tablet arm: sways during the walk, lowers before the blow, rests low at the end
+  track($("#arm"), [
+    [0, rot(3)], [320, rot(-2)], [640, rot(3)], [960, rot(-1)], [1160, rot(0)],
+    [1950, rot(0)], [2380, rot(-6)], [2480, rot(-4)],
+    [3150, rot(-4)], [3600, rot(38)], [3760, rot(36)],
+  ]);
+  track($("#fore"), [
+    [0, rot(0)], [1950, rot(0)], [2380, rot(84)], [2480, rot(79)],
+    [3150, rot(79)], [3600, rot(0)],
+  ]);
+  track($("#tab"), [
+    [0, rot(0)], [1950, rot(0)], [2380, rot(-12)], [2480, rot(-6)],
+    [3150, rot(-6)], [3600, rot(-26)],
+  ]);
+
+  // Free hand comes up and braces on the desk edge while leaning, then returns
+  const farRest = "path('M-6 -452 L-4 -356 L50 -334')";
+  const farBrace = "path('M-6 -452 L78 -400 L148 -330')";
+  track($("#farArm"), [
+    [0, { d: farRest }], [2150, { d: farRest }], [2580, { d: farBrace }],
+    [3150, { d: farBrace }], [3550, { d: farRest }],
+  ]);
+  track($("#farHand"), [
+    [0, { transform: "translate(50px,-334px) rotate(0deg)" }],
+    [2150, { transform: "translate(50px,-334px) rotate(0deg)" }],
+    [2580, { transform: "translate(150px,-326px) rotate(-22deg)" }],
+    [3150, { transform: "translate(150px,-326px) rotate(-22deg)" }],
+    [3550, { transform: "translate(50px,-334px) rotate(0deg)" }],
+  ]);
+
+  // Model fades in; the fire catches
+  track($("#model"), [
+    [0, { opacity: 0, transform: "translateY(12px)" }],
+    [250, { opacity: 0, transform: "translateY(12px)" }, OUT],
+    [850, { opacity: 1, transform: "translateY(0px)" }],
+  ]);
+  track($("#fireIn"), [
+    [0, { transform: "scale(0.15)" }],
+    [650, { transform: "scale(0.15)" }, "cubic-bezier(0.3,1.3,0.5,1)"],
+    [1150, { transform: "scale(1)" }],
+  ]);
+
+  // Blow (2.55-3.15 s): soft translucent stream toward the fire
+  $$(".breath").forEach((p, i) => {
+    const len = p.getTotalLength();
+    p.setAttribute("stroke-dasharray", `${len * 0.55} ${len * 2}`);
+    const s = 2520 + i * 40;
+    track(p, [
+      [0, { strokeDashoffset: len * 0.55, strokeOpacity: 0 }],
+      [s, { strokeDashoffset: len * 0.55, strokeOpacity: 0 }, "cubic-bezier(0.3,0,0.4,1)"],
+      [s + 160, { strokeOpacity: 0.75 }],
+      [s + 600, { strokeDashoffset: -len * 0.9, strokeOpacity: 0 }],
+    ]);
+  });
+
+  // The fire bends away, shrinks and goes out (2.60-2.95 s)
+  track($("#fireBend"), [
+    [0, { transform: "skewX(0deg) scale(1, 1)", opacity: 1 }],
+    [2580, { transform: "skewX(0deg) scale(1, 1)", opacity: 1 }, "cubic-bezier(0.4,0,0.6,1)"],
+    [2760, { transform: "skewX(-34deg) scale(0.95, 0.6)", opacity: 1 }, "cubic-bezier(0.4,0,0.7,1)"],
+    [2950, { transform: "skewX(-46deg) scale(0.3, 0.08)", opacity: 0 }],
+  ]);
+  track($("#embers"), [[0, { opacity: 1 }], [2600, { opacity: 1 }], [2750, { opacity: 0 }]]);
+  // Firelight (ambient, roof, face) flickers with the fire and fades as it dies
+  [$("#fireLight"), $("#faceLight")].forEach((n) => {
+    track(n, [
+      [0, { fillOpacity: 0 }], [700, { fillOpacity: 0 }], [1150, { fillOpacity: 1 }],
+      [2600, { fillOpacity: 1 }], [2960, { fillOpacity: 0 }],
+    ]);
+  });
+
+  // Title: camera settles, wordmark and tagline fade in (3.95-4.85 s)
+  track($("#camera"), [
+    [0, { transform: "translate(0px,0px) scale(1)" }],
+    [3900, { transform: "translate(0px,0px) scale(1)" }, OUT],
+    [4800, { transform: "translate(0px,-66px) scale(0.88)" }],
+  ]);
+  track($("#title"), [
+    [0, { opacity: 0 }],
+    [4000, { opacity: 0 }, "cubic-bezier(0.3,0,0.3,1)"],
+    [4700, { opacity: 1 }],
+  ]);
+  track($("#titleInner"), [
+    [0, { transform: "translateY(14px)" }],
+    [4000, { transform: "translateY(14px)" }, OUT],
+    [4850, { transform: "translateY(0px)" }],
+  ]);
+
+  // Center logo + wordmark as one unit once Inter is loaded
+  const centerTitle = () => {
+    const wm = $("#wordmark");
+    const w = wm.getComputedTextLength(), gap = 20, logo = 58, totalW = logo + gap + w;
+    $("#logo").setAttribute("transform", `translate(${-totalW / 2} -47)`);
+    wm.setAttribute("x", -totalW / 2 + logo + gap);
+  };
+  centerTitle();
+  document.fonts.ready.then(centerTitle);
+
+  // Deterministic seek for the renderer (WAAPI + SMIL turbulence)
+  const svg = $("#stage");
+  window.__TOTAL = TOTAL;
+  window.__seek = (t) => {
+    for (const a of anims) { a.pause(); a.currentTime = t; }
+    svg.pauseAnimations(); svg.setCurrentTime(t / 1000);
+  };
+  window.__ready = document.fonts.ready.then(() => true);
+  if (new URLSearchParams(location.search).has("render")) window.__seek(0);
+})();
+</script>
+</body>
+</html>

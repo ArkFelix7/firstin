@@ -6,6 +6,7 @@ Output: demo/FirstIn-demo-screens.pdf
 from pathlib import Path
 
 from reportlab.lib.colors import HexColor
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
 ROOT = Path(__file__).resolve().parent
@@ -13,7 +14,7 @@ OUT = ROOT / "FirstIn-demo-screens.pdf"
 
 STEPS = {
     "01-home": ("Pick a building",
-                "The officer selects 1601 Perrino Pl on the map. The table shows which data layers exist for each building, and the detail panel shows the aerial tile, CoStar facts and capture dates."),
+                "The officer selects the building on the map. The table shows which data layers exist for each building, and the detail panel shows the aerial tile, CoStar facts and capture dates."),
     "02-plan-running": ("Agent at work",
                         "The deepagents planner splits the job into NFPA 1660 sections and runs the CoStar, aerial and interior analysts in parallel. Steps, subagent timings and tool calls stream live."),
     "03-awaiting-approval": ("Cited pre-plan, awaiting review",
@@ -43,9 +44,35 @@ STEPS = {
 }
 
 SECTIONS = [
-    ("Live run: 1601 Perrino Pl, Los Angeles (real agent, all three data layers)", "screens-v3", "la-002-"),
-    ("Live run: The Ion, 4201 Main St, Houston (real agent)", "screens-v3", "hou-001-"),
-    ("Live run: The Tower, 10940 Wilshire Blvd, Los Angeles (high-rise)", "screens-v3", "la-003-"),
+    ("1601 Perrino Pl, Los Angeles: one complete run (real agent, all three data layers)", "screens-v3", [
+        ("la-002-01-home.png", *STEPS["01-home"], False),
+        ("la-002-02-plan-running.png", *STEPS["02-plan-running"], False),
+        ("la-002-03-awaiting-approval.png", *STEPS["03-awaiting-approval"], False),
+        ("la-002-04-evidence-matterport-360.png", *STEPS["04-evidence-matterport-360"], False),
+        ("la-002-11-access-plan.png", *STEPS["11-access-plan"], False),
+        ("la-002-12-access-entry-oblique.png", *STEPS["12-access-entry-oblique"], False),
+        ("la-002-06-evidence-hazard.png", *STEPS["06-evidence-hazard"], False),
+        ("la-002-07-verify-on-site.png", *STEPS["07-verify-on-site"], False),
+        ("la-002-08-edit-mode.png", *STEPS["08-edit-mode"], False),
+        ("la-002-09-published.png", *STEPS["09-published"], False),
+        ("la-002-10-incab.png", *STEPS["10-incab"], False),
+    ]),
+    ("Officer approval by iMessage (Photon)", "press/imessage", [
+        ("combined-real.png", "Officer approval by iMessage",
+         "Real screenshots from the officer's iPhone. The approval request arrives through Photon, and the officer can approve, reject or ask a question. Asked where the exit is, FirstIn answered only from the plan.", True),
+        ("approve.png", "Approved by reply",
+         "The officer replied APPROVE and the plan went live on Engine 12 (recreated from the Photon message log).", True),
+    ]),
+    ("Two more buildings: what changes from building to building", "screens-v3", [
+        ("hou-001-03-awaiting-approval.png", "The Ion, Houston: hazards from the tenant list",
+         "CoStar lists 26 tenants. A cafe, three bars and a robotics company become distinct, merged hazards, each citing the tenant records it came from.", False),
+        ("hou-001-10-incab.png", "The Ion, Houston: no guessing",
+         "CoStar has no construction type for this redeveloped building, so the cab shows Verify on site instead of inferring it from the year.", False),
+        ("la-003-11-access-high-rise.png", "10940 Wilshire, Los Angeles: a high-rise",
+         "At about 87 m the roof is beyond aerial ladder reach, and the plan says so first: use interior stairs. Green walls are apparatus set-up positions.", False),
+        ("la-003-10-incab.png", "10940 Wilshire, Los Angeles: in the cab",
+         "24 stories, steel, 1988. Top hazards: assembly occupancy on floor 1, roof damage seen from the air, and coworking floors. Roof access reads high-rise, interior stairs.", False),
+    ]),
 ]
 
 BG = HexColor("#ffffff")
@@ -90,15 +117,25 @@ def main():
 
     n = 0
     for title, folder, prefix in SECTIONS:
-        files = sorted((ROOT / folder).glob(f"{prefix}*.png"))
-        if not files:
-            continue
-        for f in files:
-            key = f.stem[len(prefix):]
-            head, sub = STEPS.get(key, (key.replace("-", " ").title(), ""))
+        if isinstance(prefix, list):  # explicit images with captions, fitted proportionally
+            pages = [(ROOT / folder / name, head, sub, fit) for name, head, sub, fit in prefix
+                     if (ROOT / folder / name).exists()]
+        else:
+            pages = []
+            for f in sorted((ROOT / folder).glob(f"{prefix}*.png")):
+                key = f.stem[len(prefix):]
+                head, sub = STEPS.get(key, (key.replace("-", " ").title(), ""))
+                pages.append((f, head, sub, False))
+        for f, head, sub, fit in pages:
             n += 1
             c.setFillColor(BG); c.rect(0, 0, W, IMG_H + BAND, fill=1, stroke=0)
-            c.drawImage(str(f), 0, BAND, width=W, height=IMG_H)
+            if fit:
+                iw, ih = ImageReader(str(f)).getSize()
+                k = min(W / iw, IMG_H / ih)
+                dw, dh = iw * k, ih * k
+                c.drawImage(str(f), (W - dw) / 2, BAND + (IMG_H - dh) / 2, width=dw, height=dh, mask="auto")
+            else:
+                c.drawImage(str(f), 0, BAND, width=W, height=IMG_H)
             c.setStrokeColor(LINE); c.line(0, BAND, W, BAND)
             c.setFillColor(MUTED); c.setFont("Helvetica", 14)
             c.drawString(40, BAND - 30, title)

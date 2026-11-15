@@ -1,0 +1,40 @@
+{
+ "source": "Photon v2 message log, project demo, officer thread, Nov 15 2026 (UTC)",
+ "messages": [
+  {
+   "ts": "2026-11-15T04:19:12.873Z",
+   "from": "firstin",
+   "text": "FirstIn pre-plan ready for approval\n1601 Perrino Pl, Los Angeles, CA 90023\n\nEngine 12, one-story industrial, built 1969, concrete tilt-up. Tenant MDB Transportation: possible high fire load, floor 1. Hazards: rooftop solar array, asbestos-containing materials, concrete tilt-up walls. Two stairs in the scan. Roof access: southwest long side; solar PV on roof. Exposure south:\n\nTop hazards:\n1. Rooftop solar array (energized PV, added dead load) \u2014 Roof\n2. High fire load: palletized / rack storage \u2014 Suite A Warehouse, Floor 1\n3. High fire load; possible solvents at loading dock (Charleston pattern) \u2014 Floor 1\n\nReview: http://localhost:3000/?run=la-002-1a38548d\n\nReply APPROVE, REJECT, or ask a question (e.g. \"where's the standpipe?\"). [ref 548d]"
+  },
+  {
+   "ts": "2026-11-15T04:19:17.969Z",
+   "from": "officer",
+   "text": "APPROVE"
+  },
+  {
+   "ts": "2026-11-15T04:19:18.596Z",
+   "from": "firstin",
+   "text": "Approved. Publishing 1601 Perrino Pl, Los Angeles, CA 90023 to Engine 12..."
+  },
+  {
+   "ts": "2026-11-15T04:19:18.879Z",
+   "from": "firstin",
+   "text": "Live on Engine 12 in-cab unit. Crew can press BRIEF ME."
+  },
+  {
+   "ts": "2026-11-15T04:20:51.777Z",
+   "from": "firstin",
+   "text": "FirstIn pre-plan ready for approval\n1601 Perrino Pl, Los Angeles, CA 90023\n\nEngine 12, one-story industrial, built 1969, concrete tilt-up. Tenant MDB Transportation: possible high fire load, floor 1. Hazards: rooftop solar array, asbestos-containing materials, concrete tilt-up walls. Two stairs in the scan. Roof access: southwest long side; solar PV on roof. Exposure south: commercial building, 64 feet.\n\nTop hazards:\n1. Rooftop solar array (energized PV, added dead load) \u2014 Roof\n2. High fire load: palletized / rack storage \u2014 Suite A Warehouse, Floor 1\n3. High fire load; possible solvents at loading dock (Charleston pattern) \u2014 Floor 1\n\nReview: http://localhost:3000/plan/la-002-9c7026a8\n\nReply APPROVE, REJECT, or ask a question (e.g. \"where's the standpipe?\"). [ref 26a8]"
+  },
+  {
+   "ts": "2026-11-15T04:21:13.490Z",
+   "from": "officer",
+   "text": "Where\u2019s the standpipe"
+  },
+  {
+   "ts": "2026-11-15T04:21:16.065Z",
+   "from": "firstin",
+   "text": "The standpipe location isn't in the plan, so verify it on site. The scan does show both stairwells, the metal stair in the Suite A warehouse and the open stair at the first floor lobby, with no standpipe noted at either.\n\n(Plan still pending. Reply APPROVE or REJECT.)"
+  }
+ ]
+}

@@ -92,7 +92,10 @@ class Run:
             "validation": self.validation, "plan": self.plan,
             "approve_url": f"/approve/{self.run_id}",
         })
-        notify_photon(self.run_id, self.plan or {})
+        if self.extra.get("notify", True):
+            notify_photon(self.run_id, self.plan or {})
+        else:
+            await self.emit("log", {"agent": "planner", "message": "Officer notification skipped (notify=false)."})
 
     def apply_decision(self, body: dict) -> dict:
         """Apply officer decision + edits to self.plan (sync, before resuming). Returns plan."""

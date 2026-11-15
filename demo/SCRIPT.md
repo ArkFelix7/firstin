@@ -71,10 +71,28 @@ Say nothing. Let the brief speak: *"Engine 12, one-story industrial, built 1969,
 
 | Shot | On screen |
 |---|---|
-| Map zoomed out over LA with the clustered 3,288 buildings | "3,288 buildings indexed. About 30 seconds each." |
-| Cut to black | **FirstIn.** Know the building before you're inside it. |
+| 1:51. Map zoomed out over LA with the clustered 3,288 buildings | "3,288 buildings indexed. About 30 seconds each." |
+| 1:54. **The blow-out graphic** (`press/blowout/blowout.mp4`, 6 s) plays under the last line (spec below) | No text until the title fades in at about 1:58 |
+| 2:00. Final frame holds | **FirstIn.** Know the building before you're inside it. |
 
-> We've already indexed 3,288 buildings in Houston and LA. The next crew should know the building before they're inside it.
+> We've already indexed 3,288 buildings in Houston and LA. *(graphic starts)* The next crew should know the building before they're inside it.
+
+### The blow-out graphic (closing visual)
+
+A short, stylized illustration in flat vector style, using the product's palette (warm grays, one ink-blue accent, flame orange). No photos and no realistic fire, so it can't be mistaken for footage of a real incident.
+
+1. **Frame 1, 0.0 s.** A firefighter in turnout gear, drawn simply, holds a tablet showing the FirstIn plan: the access-plan aerial with its green ladder walls is recognizable on the screen.
+2. **Frame 2, 0.8 s.** In front of them is a small building model, about desk size. A flame sits on its roof, the size of a candle flame.
+3. **Frame 3, 1.5 s.** The firefighter glances at the tablet, then leans in and blows, like blowing out a birthday candle.
+4. **Frame 4, 2.3 s.** The flame bends and goes out, leaving a thin curl of smoke.
+5. **Frame 5, 3.0 s.** The building model is intact. The firefighter lowers the tablet and the frame settles. The FirstIn wordmark and tagline fade in.
+
+Tone notes:
+- **Keep it calm and a little warm, not slapstick.** No cartoon cheeks or "whoosh" sound. If there's audio, it's one soft breath.
+- **It's a metaphor for being prepared, not a claim that fires are easy.** If a judge reads it literally, the line under it does the correcting: "know the building before you're inside it."
+- **Never use it near the opening.** It must come after the product demo and the business case, never next to the Houston story.
+
+Fallback if there's no time to animate it: a single still of frame 4 (the flame going out, smoke curling) behind the final title card.
 
 ---
 
@@ -93,7 +111,7 @@ Swap these in for the last 8 seconds when that judge is at the table.
 
 - **CoStar:** "Each layer finds something the others can't. Tenants tell us what's stored, the aerial tells us how to reach it, the scan tells us how to move inside. Once Vexcel closes, CoStar owns all three."
 - **LangChain:** Open the trace. "A deepagents planner with five subagents, evidence written to the virtual filesystem, and a real interrupt on publish that only an officer can resume."
-- **Photon:** Hand them the phone. "Reply APPROVE, or ask it where the standpipe is."
+- **Photon:** Hand them the phone. "Reply APPROVE, or ask it a question." Show the real exchange (`demo/press/imessage/real-exit-question.png`): asked "where's the exit", FirstIn answered from the plan, two exit doors on the northeast side, low confidence, verify on site.
 - **Amazon:** "One real user, the company officer, and every screen is built for the way they already work."
 
 ## Likely questions

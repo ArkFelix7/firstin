@@ -177,6 +177,156 @@ def select_edges(cands: list, edge_answer: dict | None, verify_answer: dict | No
     return sorted(out, key=lambda e: -e["conf"])
 
 
+MIN_SHOW_M = 10.0   # accessible walls shorter than this are kept only in edges_all
+MAX_SHOW = 4        # plan / overlay shows at most this many walls (best len_m x conf)
+
+
+def _seg_dir(a, b):
+    L = math.hypot(b[0] - a[0], b[1] - a[1]) or 1e-9
+    return (b[0] - a[0]) / L, (b[1] - a[1]) / L
+
+
+def _mergeable(e1: dict, e2: dict, gsd: float, max_angle: float = 15.0, max_off_m: float = 2.5, max_gap_m: float = 6.0) -> bool:
+    """Same side, nearly collinear (angle <= max_angle, perpendicular offset <= max_off_m) and adjacent
+    (nearest endpoints within max_gap_m)."""
+    if e1.get("side") != e2.get("side"):
+        return False
+    (a1, b1), (a2, b2) = e1["px"], e2["px"]
+    d1, d2 = _seg_dir(a1, b1), _seg_dir(a2, b2)
+    if abs(d1[0] * d2[0] + d1[1] * d2[1]) < math.cos(math.radians(max_angle)):
+        return False
+    long_, short_ = (e1, e2) if e1["len_m"] >= e2["len_m"] else (e2, e1)
+    la, lb = long_["px"]
+    nx, ny = -_seg_dir(la, lb)[1], _seg_dir(la, lb)[0]
+    off = max(abs((p[0] - la[0]) * nx + (p[1] - la[1]) * ny) for p in short_["px"]) * gsd
+    if off > max_off_m:
+        return False
+    gap = min(math.hypot(p[0] - q[0], p[1] - q[1]) for p in (a1, b1) for q in (a2, b2)) * gsd
+    return gap <= max_gap_m
+
+
+def _merge_two(e1: dict, e2: dict, gsd: float) -> dict:
+    long_, short_ = (e1, e2) if e1["len_m"] >= e2["len_m"] else (e2, e1)
+    la, lb = long_["px"]
+    d = _seg_dir(la, lb)
+    pts = [la, lb] + list(short_["px"])
+    proj = [((p[0] - la[0]) * d[0] + (p[1] - la[1]) * d[1], p) for p in pts]
+    p0, p1 = min(proj)[1], max(proj)[1]
+    tot = (e1["len_m"] or 0) + (e2["len_m"] or 0)
+    conf = round(((e1["conf"] or 0) * e1["len_m"] + (e2["conf"] or 0) * e2["len_m"]) / (tot or 1), 2)
+    ids = list(dict.fromkeys((long_.get("merged_ids") or [long_["id"]]) + (short_.get("merged_ids") or [short_["id"]])))
+    lat = long_.get("latlng")
+    if lat and short_.get("latlng"):
+        lproj = {tuple(long_["px"][0]): long_["latlng"][0], tuple(long_["px"][1]): long_["latlng"][1],
+                 tuple(short_["px"][0]): short_["latlng"][0], tuple(short_["px"][1]): short_["latlng"][1]}
+        lat = [lproj.get(tuple(p0)), lproj.get(tuple(p1))]
+    return {**long_, "px": [list(p0), list(p1)], "latlng": lat,
+            "len_m": round(math.hypot(p1[0] - p0[0], p1[1] - p0[1]) * gsd, 1), "conf": conf,
+            "verified": True if (e1.get("verified") or e2.get("verified")) else long_.get("verified"),
+            "merged_ids": ids}
+
+
+def consolidate_edges(edges: list, gsd: float, min_len_m: float = MIN_SHOW_M, max_n: int = MAX_SHOW,
+                      min_conf: float = 0.5) -> tuple[list, list]:
+    """Accessible walls -> (shown, merged_all). Adjacent, nearly collinear walls on the same side are merged
+    (a merged footprint traced as many short segments becomes one wall); walls < min_len_m or conf < min_conf
+    are dropped from `shown`; `shown` = best max_n by len_m x conf. merged_all keeps every merged wall (any length)."""
+    work = [dict(e) for e in edges if e.get("px") and len(e["px"]) == 2]
+    changed = True
+    while changed:
+        changed = False
+        for i in range(len(work)):
+            for j in range(i + 1, len(work)):
+                if _mergeable(work[i], work[j], gsd):
+                    work[i] = _merge_two(work[i], work[j], gsd)
+                    work.pop(j)
+                    changed = True
+                    break
+            if changed:
+                break
+    work.sort(key=lambda e: -(e["len_m"] * (e.get("conf") or 0)))
+    shown = [e for e in work if e["len_m"] >= min_len_m and (e.get("conf") or 0) >= min_conf][:max_n]
+    return shown, work
+
+
+_APPROACH = re.compile(r"street|road|boulevard|blvd|avenue|ave\b|lane|alley|drive|lot|parking|aisle|apron|yard|intersection", re.I)
+
+
+def _side_phrase(e: dict, n: int = 4) -> str:
+    """'sidewalk, trees, then street to west' -> 'street'; 'paved lot with landscaping strip' -> 'paved lot'."""
+    t = re.sub(r"\([^)]*\)", "", str(e.get("adjacent") or ""))
+    clauses = [c.strip() for c in re.split(r"[,;.]| then | and then | beyond ", t) if c.strip()]
+    pick = next((c for c in reversed(clauses) if _APPROACH.search(c)), clauses[0] if clauses else "")
+    pick = re.split(r" with | to the | to (?:north|south|east|west)| on the | at the | along ", pick)[0]
+    w = [x for x in pick.split() if x.lower() not in ("then", "a", "an")][:n]
+    while w and w[-1].lower() in ("to", "the", "of", "on", "at", "in", "from", "by", "and", "with"):
+        w.pop()
+    return " ".join(w).lower() or "open approach"
+
+
+def roof_access_text(shown: list, rejected: list, height_m: float | None = None, all_edges: list | None = None) -> dict | None:
+    """Concise roof-access text from the shown walls: <= 3 sides, <= 2 short clauses per side."""
+    if not shown:
+        return None
+    best: dict = {}
+    for e in shown:  # shown is ranked: first wall per side is that side's best
+        best.setdefault(e["side"], e)
+    sides = list(best)[:3]
+    conf = round(max(e["conf"] for e in shown), 2)
+    detail = "Accessible walls: " + "; ".join(_edge_text(e) for e in (all_edges or shown))
+    if rejected:
+        detail += ". Not accessible: " + ", ".join(dict.fromkeys(rejected))
+    if isinstance(height_m, (int, float)) and height_m > 30:
+        parts = [f"{s} side from {_side_phrase(best[s])} ({best[s]['len_m']:.0f} m wall)" for s in sides]
+        return {"value": f"High-rise (~{height_m:.0f} m): beyond aerial ladder reach (~30 m), use interior stairs. "
+                         f"Apparatus set-up: " + "; ".join(parts) + ".",
+                "short": f"high-rise, interior stairs; apparatus at {'/'.join(sides)}",
+                "detail": detail, "conf": conf, "high_rise": True, "height_m": round(float(height_m), 1)}
+    txt = []
+    for s in sides:  # long adjacency descriptions -> the approach phrase; full text stays in `detail`
+        e = best[s]
+        adj = re.sub(r"\s+", " ", str(e.get("adjacent") or "")).strip().rstrip(".")
+        if len(adj.split()) > 6:
+            e = {**e, "adjacent": _side_phrase(e)}
+        txt.append(_edge_text(e))
+    val = "Aerial/ladder access from " + "; ".join(txt)
+    if rejected:
+        val += ". Not accessible: " + ", ".join(list(dict.fromkeys(rejected))[:3])
+    adj0 = best[sides[0]].get("adjacent")
+    short = (f"{'/'.join(sides)} side{'s' if len(sides) > 1 else ''} from {_short_adj(adj0)}".strip()
+             if adj0 else f"{'/'.join(sides)} side")
+    return {"value": val, "short": short, "detail": detail, "conf": conf}
+
+
+def apply_consolidation(res: dict, height_m: float | None = None) -> dict:
+    """Post-process an analyze_access result (fresh or cached): edges -> merged/capped walls, all accessible
+    walls in edges_all, concise roof_access. Idempotent."""
+    if not isinstance(res, dict) or res.get("error") or res.get("consolidated"):
+        return res
+    raw = res.get("edges") or []
+    gsd = float((res.get("base") or {}).get("gsd_m") or 0) or None
+    if not raw or not gsd:
+        res["consolidated"] = True
+        return res
+    shown, merged = consolidate_edges(raw, gsd)
+    rejected = res.get("rejected_sides")
+    if rejected is None:
+        old = str((res.get("roof_access") or {}).get("value") or "")
+        m = re.search(r"Not accessible: (.+?)\.?$", old)
+        rejected = re.findall(r"[NSEW]{1,2} \([^)]*\)", m.group(1)) if m else []
+    if isinstance((res.get("roof_access") or {}).get("height_m"), (int, float)) and height_m is None:
+        height_m = res["roof_access"]["height_m"]
+    res["edges_all"] = raw
+    res["edges_merged"] = merged
+    res["edges"] = shown
+    res["roof_access"] = roof_access_text(shown, rejected, height_m, merged) if shown else None
+    if not shown:  # only short walls: report them rather than nothing
+        res["roof_access"] = roof_access_text(merged[:MAX_SHOW], rejected, height_m, merged)
+        res["edges"] = merged[:MAX_SHOW]
+    res["consolidated"] = True
+    return res
+
+
 def overlap_frac(poly: list, other: list, res: float = 0.5) -> float:
     """Fraction of `poly`'s area that lies inside `other` (raster estimate on a res-px grid)."""
     from PIL import Image, ImageDraw
@@ -616,7 +766,7 @@ def _analyze(bid: str, allow_live, force, log, t_start) -> dict:
         try:
             d = json.loads(out_json.read_text())
             if d.get("version") == VERSION:
-                return {**d, "cached": True}
+                return {**apply_consolidation(d), "cached": True}
         except Exception:  # noqa: BLE001
             pass
     fp = sources.vexcel_footprint(bid)
@@ -948,31 +1098,9 @@ def _analyze(bid: str, allow_live, force, log, t_start) -> dict:
         if a and a.get("accessible") is False and c["len_m"] >= 15:
             if not any(r.startswith(c["side"] + " ") for r in rejected):
                 rejected.append(f"{c['side']} ({_short_adj(a.get('adjacent'), 6) or 'blocked'})")
-    roof_access = None
-    if edges:
-        seen, txt = set(), []
-        for e in edges:
-            if e["side"] in seen:
-                continue
-            seen.add(e["side"])
-            txt.append(_edge_text(e))
-        sides = list(dict.fromkeys(e["side"] for e in edges))
-        val = "Aerial/ladder access from " + "; ".join(txt)
-        if rejected:
-            val += ". Not accessible: " + ", ".join(dict.fromkeys(rejected))
-        short = f"{'/'.join(sides[:3])} side{'s' if len(sides) > 1 else ''} from {_short_adj(edges[0].get('adjacent'))}".strip()
-        roof_access = {"value": val, "short": short if edges[0].get("adjacent") else f"{'/'.join(sides[:3])} side",
-                       "conf": round(max(e["conf"] for e in edges), 2)}
-
-    # aerial reach: ~30 m (100 ft) aerials; taller roofs are reached by interior stairs
+    # aerial reach: ~30 m (100 ft) aerials; taller roofs are reached by interior stairs (text: apply_consolidation)
     roof = sources.vexcel_roof(bid)
     h = ((roof.get("target") or {}).get("height_est_m") if not roof.get("error") else None)
-    if roof_access and isinstance(h, (int, float)) and h > 30:
-        roof_access["value"] = (f"High-rise (~{h:.0f} m): roof is beyond aerial ladder reach (~30 m), use interior stairs. "
-                                f"Apparatus can set up at: " + roof_access["value"].removeprefix("Aerial/ladder access from "))
-        roof_access["short"] = f"high-rise, interior stairs; apparatus at {'/'.join(list(dict.fromkeys(e['side'] for e in edges))[:3])}"
-        roof_access["high_rise"] = True
-        roof_access["height_m"] = round(h, 1)
 
     res = {
         "version": VERSION,
@@ -980,7 +1108,8 @@ def _analyze(bid: str, allow_live, force, log, t_start) -> dict:
         "base": {"view": view, "tile_id": tile["tile_id"], "image_url": tile["image_url"], "img_w": g["width"],
                  "img_h": g["height"], "gsd_m": gsd, "captured_at": tile.get("captured_at")},
         "footprint_px": [[round(x, 1), round(y, 1)] for x, y in simp],
-        "roof_access": roof_access,
+        "roof_access": None,
+        "rejected_sides": list(dict.fromkeys(rejected)),
         "edges": [{"id": e["id"], "side": e["side"], "px": [e["a"], e["b"]], "latlng": [_ll(g, e["a"]), _ll(g, e["b"])],
                    "len_m": e["len_m"], "conf": e["conf"], "reason": e.get("reason"), "adjacent": e.get("adjacent"),
                    "clear_width_ft": e.get("clear_width_ft"), "verified": e.get("verified"), "verify_note": e.get("verify_note")}
@@ -999,6 +1128,7 @@ def _analyze(bid: str, allow_live, force, log, t_start) -> dict:
         "calls": log,
         "secs": round(time.time() - t_start, 1),
     }
+    apply_consolidation(res, h if isinstance(h, (int, float)) else None)
     try:
         res["annotated_url"], res["annotated"] = _render(full, crop, box, simp, res, vdir, g)
         res["oblique_annotated"] = _render_obliques(obl, final_entries, vdir)
@@ -1153,4 +1283,4 @@ def _render_obliques(obl: list, entries: list, vdir: Path) -> dict:
     return out
 
 
-__all__ = ["analyze_access", "extract_edges", "select_edges", "validate_staging", "overlap_frac", "clip_halfplane"]
+__all__ = ["analyze_access", "extract_edges", "select_edges", "consolidate_edges", "apply_consolidation", "validate_staging", "overlap_frac", "clip_halfplane"]

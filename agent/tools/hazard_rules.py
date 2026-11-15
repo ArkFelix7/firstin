@@ -48,6 +48,9 @@ def _floor_loc(t: dict) -> str | None:
 
 LIGHTWEIGHT_EVIDENCE = re.compile(r"\b(wood|frame|lightweight|truss|joist|i-joist|engineered|podium|type v)", re.I)
 HEAVY_CONSTRUCTION = re.compile(r"\b(concrete|steel|masonry|tilt|brick|reinforced)", re.I)
+# scan-panorama evidence must name the structure itself (bare "frame" also matches door/window frames)
+LIGHTWEIGHT_SCAN = re.compile(r"\b(wood[- ]fram\w*|wood (roof |floor )?truss\w*|engineered (wood|lumber|joist)\w*|i-joists?|"
+                              r"open[- ]web (wood )?joists?|lightweight (wood|truss|construction|framing))", re.I)
 REDEVELOPED = re.compile(r"\b(redevelop|historic|conver|adaptive reuse|originally built|restor)", re.I)
 
 
@@ -114,18 +117,29 @@ def match_hazards(tenants: list[dict] | None = None, year_built: int | None = No
         yb = None
     if yb:
         cons = construction or ""
-        obs_text = " ".join(str(o.get("text") or "") for o in (interior or []) if isinstance(o, dict))
         for r in rules.get("era_rules", []):
+            frm, why = ["costar.year_built"], f"built {yb}"
             if "lightweight" in r["id"]:
-                evidence = f"{cons} {roof or ''} {obs_text}"
-                if not LIGHTWEIGHT_EVIDENCE.search(evidence) or HEAVY_CONSTRUCTION.search(cons) or REDEVELOPED.search(cons):
+                # needs CITED construction evidence: CoStar construction/description text, or a scan panorama that
+                # explicitly shows wood framing / trusses. Never year_built alone (redevelopments keep old frames).
+                if HEAVY_CONSTRUCTION.search(cons) or REDEVELOPED.search(cons):
                     continue
+                m = LIGHTWEIGHT_EVIDENCE.search(cons)
+                if m:
+                    frm, why = frm + ["costar.construction"], f"built {yb}; CoStar construction text '{m.group(0)}'"
+                else:
+                    hits = [o for o in (interior or []) if isinstance(o, dict) and LIGHTWEIGHT_SCAN.search(str(o.get("text") or ""))]
+                    if not hits:
+                        continue
+                    kw = LIGHTWEIGHT_SCAN.search(str(hits[0].get("text"))).group(0)
+                    frm = frm + [f"matterport:{o.get('sweep_id') or (o.get('cite') or {}).get('id')}" for o in hits[:3]]
+                    why = f"built {yb}; scan panorama shows '{kw}'"
             if r["year_min"] <= yb < r["year_max"]:
                 out.append({
-                    "type": r["hazard"], "location": "Building-wide", "reason": f"built {yb}",
+                    "type": r["hazard"], "location": "Building-wide", "reason": why,
                     "rule": r["id"], "tactics": r.get("tactics"), "conf": r["conf"],
                     "cite": {"src": "inference", "id": f"rule:{r['id']}", "conf": r["conf"], "bbox": None,
-                             "url": None, "from": ["costar.year_built"]},
+                             "url": None, "from": frm},
                 })
     if roof:
         for r in rules.get("roof_rules", []):
@@ -168,4 +182,101 @@ def match_hazards(tenants: list[dict] | None = None, year_built: int | None = No
         if k not in seen:
             seen.add(k)
             uniq.append(h)
-    return {"hazards": uniq, "rules_version": "seed-1"}
+    return {"hazards": merge_hazards(uniq), "rules_version": "seed-1"}
+
+
+# ---------------------------------------------------------------- merge duplicates
+_FLOOR_LOC = re.compile(r"^Floor (\S+?)(?:, suites? (.+))?$")
+
+
+def _floor_key(f: str):
+    return (0, float(f)) if re.fullmatch(r"-?\d+(\.\d+)?", f) else (1, f)
+
+
+def combine_locations(locs: list) -> str:
+    """['Floor 1, suite 110', 'Floor 1', 'Floor 1, suite 130'] -> 'Floor 1, suites 110, 130';
+    ['Floor 2', 'Floor 4'] -> 'Floors 2, 4'. Other strings are joined with '; '."""
+    locs = [str(x).strip() for x in dict.fromkeys(locs) if x and str(x).strip() and x != "VERIFY ON SITE"]
+    if not locs:
+        return "VERIFY ON SITE"
+    floors: dict[str, list] = {}
+    other: list[str] = []
+    for loc in locs:
+        m = _FLOOR_LOC.match(loc)
+        if m:
+            floors.setdefault(m.group(1), [])
+            # "" marks a tenant on this floor without a suite number
+            floors[m.group(1)] += [x.strip() for x in m.group(2).split(",") if x.strip()] if m.group(2) else [""]
+        else:
+            other.append(loc)
+    parts = []
+    fl = sorted(floors, key=_floor_key)
+    if len(fl) > 1 and not any(x for v in floors.values() for x in v):
+        parts.append("Floors " + ", ".join(fl))
+    else:
+        for f in fl:
+            su = list(dict.fromkeys(x for x in floors[f] if x))
+            incl = "incl. " if su and "" in floors[f] else ""
+            parts.append(f"Floor {f}" + (f", {incl}suite{'s' if len(su) > 1 else ''} {', '.join(su)}" if su else ""))
+    parts += [o for o in other if o not in parts]
+    if "Building-wide" in parts and len(parts) > 1:
+        parts.remove("Building-wide")
+    return "; ".join(parts)
+
+
+def _hz_key(h: dict) -> str:
+    return re.sub(r"\s+", " ", str(h.get("type") or "")).strip().lower()
+
+
+def merge_hazards(hazards: list | None) -> list:
+    """One hazard per rule/type: same-type hazards from several tenants (or several scan panoramas) become ONE
+    item with a combined location ('Floor 1, suites 110, 130'), `tenants` + `basis` ('tenants A, B, C') and the
+    union of every source cite in `cite.from`. Order = first (highest-ranked) occurrence. Idempotent."""
+    if not isinstance(hazards, list):
+        return hazards
+    groups: dict[str, list] = {}
+    order: list = []
+    for h in hazards:
+        if not isinstance(h, dict) or not h.get("type"):
+            order.append(h)
+            continue
+        k = _hz_key(h)
+        if k not in groups:
+            groups[k] = []
+            order.append(k)
+        groups[k].append(h)
+    out = []
+    for k in order:
+        if not isinstance(k, str):
+            out.append(k)
+            continue
+        hs = groups[k]
+        if len(hs) == 1:
+            out.append(hs[0])
+            continue
+        best = max(hs, key=lambda h: h.get("conf") or 0)
+        tenants: list[str] = []
+        for h in hs:
+            for t in (h.get("tenants") or ([h["tenant"]] if h.get("tenant") else [])):
+                if t and t not in tenants:
+                    tenants.append(t)
+        frm: list = []
+        for h in hs:
+            for f in ((h.get("cite") or {}).get("from") or []):
+                if f not in frm:
+                    frm.append(f)
+        reasons = list(dict.fromkeys(str(h.get("reason")) for h in hs if h.get("reason")))
+        conf = max((h.get("conf") or 0) for h in hs)
+        m = {**best, "location": combine_locations([h.get("location") for h in hs]),
+             "reason": "; ".join(reasons) or best.get("reason"), "conf": conf,
+             "cite": {**(best.get("cite") or {}), "conf": conf, "from": frm or (best.get("cite") or {}).get("from")},
+             "merged": sum(int(h.get("merged") or 1) for h in hs)}
+        if tenants:
+            m["tenants"] = tenants
+            m["tenant"] = ", ".join(tenants)
+            m["basis"] = f"tenant{'s' if len(tenants) > 1 else ''} {', '.join(tenants)}"
+        else:
+            m.pop("tenant", None)
+            m["basis"] = f"{m['merged']} observations"
+        out.append(m)
+    return out

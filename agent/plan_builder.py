@@ -11,6 +11,7 @@ import time
 from typing import Any
 
 from . import config
+from .tools.hazard_rules import merge_hazards
 from .tools.validator import VERIFY, validate_plan
 
 V = {"value": VERIFY, "cite": None}
@@ -31,10 +32,38 @@ FP_KEYS = {
 _SKIP_DASH_KEYS = {"cite", "url", "image_url", "image_path", "id", "media"}
 
 
+_PUNCT_FIXES = ((re.compile(r"\s+([,;])"), r"\1"), (re.compile(r"([.!?;:]),+"), r"\1"), (re.compile(r",\s*,+"), ","))
+
+
+def tidy_punct(s: str) -> str:
+    """Repair joins like 'low., Lobby' / 'a,, b' / 'a , b' -> 'low. Lobby' / 'a, b' / 'a, b'."""
+    for rx, sub in _PUNCT_FIXES:
+        s = rx.sub(sub, s)
+    return s
+
+
+def join_text(*parts, sep: str = ", ") -> str:
+    """Join text fragments without punctuation artifacts: a fragment ending in a sentence stop starts a new
+    sentence instead of being followed by ', '."""
+    out = ""
+    for p in parts:
+        p = str(p or "").strip().strip(",;").strip()
+        if not p:
+            continue
+        if not out:
+            out = p
+        elif out[-1] in ".!?":
+            out += " " + p[0].upper() + p[1:]
+        else:
+            out += sep + p
+    return tidy_punct(re.sub(r"\s{2,}", " ", out))
+
+
 def no_dash(x: Any, _key: str | None = None) -> Any:
-    """Remove em/en dashes from user-facing text: ' — ' -> ', ', bare '—' -> '-'. Recurses into dicts/lists."""
+    """Remove em/en dashes from user-facing text: ' — ' -> ', ', bare '—' -> '-'. Recurses into dicts/lists.
+    Also repairs joining artifacts ('.,', ',,', ' ,')."""
     if isinstance(x, str):
-        return re.sub(r"\s*[—–]\s*", lambda m: ", " if m.group(0).strip() != m.group(0) else "-", x).replace(", ,", ",")
+        return tidy_punct(re.sub(r"\s*[—–]\s*", lambda m: ", " if m.group(0).strip() != m.group(0) else "-", x))
     if isinstance(x, dict):
         return {k: (v if k in _SKIP_DASH_KEYS else no_dash(v, k)) for k, v in x.items()}
     if isinstance(x, list):
@@ -94,6 +123,7 @@ def _rlabel(r: dict) -> str:
 
 
 def era_construction(year: int | None) -> str | None:
+    """Era-typical construction. NOT used for plan fields (year alone is not evidence); kept for reference."""
     if not year:
         return None
     if year < 1940:
@@ -236,15 +266,10 @@ def building_section(b: dict, costar: dict, aerial: dict, vx: dict | None = None
         frm = list((base["cite"] or {}).get("from") or []) + ["costar.description_flags"]
         cons = {"value": "Concrete tilt-up" + (f" (CoStar material: {mat['value']})" if mat["value"] != VERIFY else ""),
                 "cite": {**base["cite"], "from": frm}}
-    if cons["value"] != VERIFY:
-        out["construction"] = cons
-    else:
-        era = era_construction(prop.get("year_built"))
-        frm = ["costar.year_built"]
-        if t.get("roof_shape") or _get(aerial, "findings", "roof_type", "value"):
-            frm.append("vexcel.roof")
-        out["construction"] = _field(era, {"src": "inference", "id": "era-construction", "conf": 0.4,
-                                           "bbox": None, "url": None, "from": frm})
+    # Construction comes ONLY from CoStar's construction/material fields. Never inferred from year_built:
+    # e.g. The Ion (hou-001) is a 2021 redevelopment of a 1930s concrete building.
+    out["construction"] = cons if cons["value"] != VERIFY else {
+        **V, "note": "CoStar has no construction type; not inferred from year built"}
     # never turn "unknown" into "No"
     sp = prop.get("sprinklers")
     out["sprinklers"] = _pf(prop, "sprinklers", 0.85) if sp not in (None, "", "Unknown", "unknown") else dict(V)
@@ -306,6 +331,8 @@ def access_section(aerial: dict, vx: dict | None = None) -> tuple[dict, list]:
         node = f.get(key) or {}
         out[key] = _field(node.get("value"), _vx_cite(tile, node)) if node.get("value") else dict(V)
     _access_geometry(out, (vx or {}).get("access"))
+    for key in ("roof_access", "staging", "hydrants", "access_roads"):
+        out[key] = concise_field(out.get(key), with_short=(key == "roof_access"))
     exposures = []
     roof, _t = _roof_target(vx or {})
     for i, e in enumerate(roof.get("exposures") or []):
@@ -327,6 +354,31 @@ def access_section(aerial: dict, vx: dict | None = None) -> tuple[dict, list]:
             exposures.append({"side": e.get("side") or "?", "desc": e.get("desc") or e.get("value"),
                               "cite": _vx_cite(tile, e)})
     return out, exposures
+
+
+_SENT_SPLIT = re.compile(r"(?<=[a-z0-9)\]][.!?])\s+(?=[A-Z(])")
+
+
+def concise_field(node: Any, max_sents: int = 2, max_words: int = 50, with_short: bool = False) -> Any:
+    """Keep a field's main `value` to 1-2 short sentences; the full text moves to `detail`.
+    with_short: make sure a one-clause `short` form exists (used by the brief / in-cab card)."""
+    if not isinstance(node, dict) or not isinstance(node.get("value"), str) or node["value"] == VERIFY:
+        return node
+    v = node["value"].strip()
+    out = dict(node)
+    sents = _SENT_SPLIT.split(v)
+    if len(sents) > max_sents or len(v.split()) > max_words:
+        keep = " ".join(sents[:max_sents])
+        if len(keep.split()) > max_words:
+            keep = sents[0]
+        if len(keep.split()) > max_words:
+            cut = " ".join(keep.split()[:max_words])
+            keep = cut[:cut.rfind("; ")] + "." if "; " in cut else cut.rstrip(",;:") + "…"
+        out["value"] = keep
+        out["detail"] = node.get("detail") or v
+    if with_short and not out.get("short"):
+        out["short"] = short_clause(v, 8)
+    return out
 
 
 def _px_bbox(pts: list) -> list | None:
@@ -351,13 +403,18 @@ def _access_geometry(out: dict, acc: dict | None) -> None:
                 "img_w": base.get("img_w"), "img_h": base.get("img_h"), "from": None}
 
     ra, edges = acc.get("roof_access") or {}, acc.get("edges") or []
+    ek = ("id", "side", "px", "latlng", "len_m", "conf", "reason", "verified", "merged_ids")
     if ra.get("value") and edges:
         out["roof_access"] = {
             "value": ra["value"], "short": ra.get("short"),
             "cite": cite(ra.get("conf"), _px_bbox([p for e in edges for p in e["px"]])),
             "geometry": {"type": "edges", **img,
-                         "edges": [{k: e.get(k) for k in ("id", "side", "px", "latlng", "len_m", "conf", "reason", "verified")}
-                                   for e in edges]}}
+                         "edges": [{k: e.get(k) for k in ek if k in e or k != "merged_ids"} for e in edges],
+                         "edges_all": [{k: e.get(k) for k in ek if k in e or k != "merged_ids"}
+                                       for e in (acc.get("edges_all") or edges)]}}
+        for k in ("detail", "high_rise", "height_m"):
+            if ra.get(k) is not None:
+                out["roof_access"][k] = ra[k]
     elif chk.get("edges"):
         out["roof_access"] = {**V, "note": "no footprint wall with verified apparatus access in aerial imagery"}
     st = acc.get("staging")
@@ -455,7 +512,11 @@ def interior_section(mp: dict) -> dict:
             for k, v in (fnd.items() if isinstance(fnd, dict) else []):
                 if rx.search(k) or rx.search(str(v)):
                     v = v if isinstance(v, dict) else {"value": str(v)}
-                    return {"value": f"{v.get('value') or k}, {a.get('scan') or a.get('room') or ''} {_floor_label(a.get('floor'))}".strip(" ,"),
+                    loc = join_text(a.get("scan") or a.get("room"), _floor_label(a.get("floor")))
+                    txt = str(v.get("value") or k).strip()
+                    if loc:
+                        txt = join_text(txt if txt.endswith((".", "!", "?")) else txt + ".", f"Location: {loc}")
+                    return {"value": txt, "location": loc or None,
                             "cite": _mp_cite(model_id, a.get("sweep_id"), v.get("conf", 0.6), v.get("bbox"), a.get("image_url"))}
         return dict(V)
 
@@ -489,6 +550,9 @@ def _annotated(tile: dict) -> str | None:
 
 
 # ---------------------------------------------------------------- top level
+HZ_BASE = ("type", "location", "reason", "tactics", "conf", "cite", "tenant")
+
+
 def build_plan(plan_id: str, building: dict, evidence: dict, mode: str = "offline") -> dict:
     costar = evidence.get("costar") or {}
     vx = evidence.get("vexcel") or {}
@@ -507,8 +571,8 @@ def build_plan(plan_id: str, building: dict, evidence: dict, mode: str = "offlin
         "occupancy": occupancy_section(costar),
         "access": access,
         "interior": interior_section(mp),
-        "hazards": [{k: h.get(k) for k in ("type", "location", "reason", "tactics", "conf", "cite", "tenant")}
-                    for h in hz.get("hazards", [])],
+        "hazards": [{k: h.get(k) for k in ("type", "location", "reason", "tactics", "conf", "cite", "tenant", "tenants", "basis", "merged") if k in h or k in HZ_BASE}
+                    for h in merge_hazards([x for x in hz.get("hazards", []) if not _unsupported_lightweight(x)])],
         "exposures": exposures or dict(V),
         "media": {
             "aerial_url": _annotated(aerial["_tile"]) or aerial["_tile"].get("image_url"),
@@ -559,7 +623,8 @@ def stairs_text(plan: dict) -> str | None:
 
 
 def top_hazards_detail(plan: dict, n: int = 3) -> list[dict]:
-    hz = [h for h in plan.get("hazards") or [] if isinstance(h, dict) and h.get("type")]
+    """Top-n DISTINCT hazards (same-type items from several tenants are merged first)."""
+    hz = [h for h in merge_hazards(plan.get("hazards") or []) if isinstance(h, dict) and h.get("type")]
     hz.sort(key=lambda h: -(h.get("conf") or 0))
     out, seen = [], set()
     for h in hz:
@@ -567,7 +632,10 @@ def top_hazards_detail(plan: dict, n: int = 3) -> list[dict]:
             continue
         seen.add(h["type"])
         loc = h.get("location") if h.get("location") not in (None, "", VERIFY) else None
-        out.append({"type": no_dash(h["type"]), "location": no_dash(loc) if loc else None, "conf": h.get("conf")})
+        d = {"type": no_dash(h["type"]), "location": no_dash(loc) if loc else None, "conf": h.get("conf")}
+        if h.get("basis"):
+            d["basis"] = h["basis"]
+        out.append(d)
     return out[:n]
 
 
@@ -647,7 +715,10 @@ def roof_access_short(plan: dict) -> str | None:
 def _hz_phrase(h: dict) -> str:
     t = _spoken(h.get("type", "")).lower()
     t = re.sub(r"^possible ", "", t)
-    w = (condense(t.split(":")[0].replace(" / ", " or ").strip(), 5) or "").rstrip("…").split()
+    c = condense(t.split(":")[0].replace(" / ", " or ").strip(), 5) or ""
+    if c.endswith("…") and "," in c:  # truncated mid-list: end at the last complete item
+        c = c[:c.rfind(",")]
+    w = c.rstrip("…").split()
     while w and w[-1] in ("in", "and", "or", "the", "of", "to", "at", "on", "with", "for", "a"):
         w.pop()
     return " ".join(w)
@@ -676,13 +747,17 @@ def voice_brief(plan: dict, max_words: int = 60) -> str:
         desc.append("concrete tilt-up" if "tilt" in str(cons).lower() else condense(re.sub(r"\s*\(.*", "", str(cons)).lower(), 4))
     # (priority, sentence) - lower priority number kept first when trimming
     sents: list[tuple[int, str]] = [(0, f"{unit}, {', '.join(desc)}")]
-    hz = sorted([h for h in plan.get("hazards") or [] if isinstance(h, dict) and not h.get("verify_on_site")],
+    hz = sorted([h for h in merge_hazards(plan.get("hazards") or []) if isinstance(h, dict) and not h.get("verify_on_site")],
                 key=lambda h: -(h.get("conf") or 0))
     th = [h for h in hz if h.get("tenant")]
     if th:
         h = th[0]
         loc = f", {h['location'].lower()}" if h.get("location") and h["location"] != VERIFY else ""
-        sents.append((1, f"Tenant {h['tenant']}: possible {_hz_phrase(h)}{loc}"))
+        names = h.get("tenants") or [h["tenant"]]
+        who = (f"Tenant {names[0]}" if len(names) == 1 else
+               f"Tenants {names[0]} and {names[1]}" if len(names) == 2 else
+               f"Tenants {names[0]}, {names[1]} and {len(names) - 2} more")
+        sents.append((1, f"{who}: possible {_hz_phrase(h)}{loc}"))
     other = sorted([h for h in hz if not h.get("tenant")],
                    key=lambda h: (0 if str((h.get("cite") or {}).get("id", "")).startswith("rule:") else 1, -(h.get("conf") or 0)))
     rest = sorted(other + th[1:], key=lambda h: (0 if str((h.get("cite") or {}).get("id", "")).startswith("rule:") else 1,
@@ -763,6 +838,27 @@ def incab_summary(plan: dict, audio_url: str | None = None) -> dict:
     }
 
 
+_LW_TYPE = re.compile(r"lightweight|engineered (wood|lumber)|wood[/ ]truss|truss construction", re.I)
+_LW_EVIDENCE_FROM = re.compile(r"costar\.(construction|description)|matterport", re.I)
+
+
+def _unsupported_lightweight(h: Any) -> bool:
+    """Lightweight-construction hazard whose only basis is the build year (LLM or stale rule output)."""
+    if not isinstance(h, dict) or not _LW_TYPE.search(str(h.get("type") or "")) or "roof" in str(h.get("location") or "").lower():
+        return False
+    frm = (h.get("cite") or {}).get("from") or []
+    return not any(_LW_EVIDENCE_FROM.search(str(f)) for f in frm)
+
+
+def _era_only_construction(node: Any) -> bool:
+    if not isinstance(node, dict) or node.get("value") in (None, VERIFY):
+        return False
+    c = node.get("cite") or {}
+    frm = [str(f) for f in (c.get("from") or [])]
+    return ("era-inferred" in str(node.get("value")).lower() or c.get("id") == "era-construction"
+            or (c.get("src") == "inference" and frm and all("year_built" in f or "vexcel.roof" in f for f in frm)))
+
+
 def finalize(plan: dict) -> dict:
     """Validate + refresh brief. Returns the validator result (plan under 'plan')."""
     plan = dict(plan)
@@ -776,6 +872,15 @@ def finalize(plan: dict) -> dict:
                 x = {**x, "loc": "Stair (unlabeled)"}
             clean.append(x)
         plan["interior"] = {**it, "stairwells": clean or dict(V)}
+    if isinstance(plan.get("hazards"), list):
+        plan["hazards"] = merge_hazards([h for h in plan["hazards"] if not _unsupported_lightweight(h)])
+    b = plan.get("building")
+    if isinstance(b, dict) and _era_only_construction(b.get("construction")):
+        plan["building"] = {**b, "construction": {**V, "note": "CoStar has no construction type; not inferred from year built"}}
+    acc = plan.get("access")
+    if isinstance(acc, dict):
+        plan["access"] = {**acc, **{k: concise_field(acc[k], with_short=(k == "roof_access"))
+                                    for k in ("roof_access", "staging", "hydrants", "access_roads") if k in acc}}
     res = validate_plan(no_dash(plan))
     if res["plan"] is not None:
         res["plan"]["voice_brief"] = voice_brief(res["plan"])

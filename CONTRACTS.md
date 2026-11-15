@@ -34,7 +34,7 @@ Each module reads from `agent/cache/<source>/...` first (offline-safe), then liv
 - `tools/vision.py`
   - `describe_image(image_path: str, question: str) -> dict` → VLM (Anthropic claude, model from env FIRSTIN_MODEL, default `claude-sonnet-5-5`) answer with detections [{label, bbox, conf}]. Falls back to cached answer in `agent/cache/vision/` keyed by sha1(image+question).
 - `tools/access.py`
-  - `analyze_access(building_id) -> dict` → {roof_access {value, short, conf}, edges [{id, side, px:[[x,y],[x,y]], latlng, len_m, conf, reason, verified}], staging {value, px, latlng, conf, verified} | null, entries [{n, type: dock_door|drive_in|rollup|entrance|exit, side, value, conf, cite {src: vexcel, id: oblique tile, bbox, img_w, img_h, url}, ortho_point {px, latlng, approx: true}}], entries_summary, base {view, tile_id, image_url, img_w, img_h}, annotated_url, oblique_annotated}. `px` = full-res pixels of `base.image_url` (ortho, or context when the footprint does not fit). 4 cached VLM calls (edges, staging, entries on the 4 obliques, verification). Plan: `access.roof_access.geometry` (type edges), `access.staging.geometry` (type polygon), `access.entries[]`, `access.entries_summary`, `media.access_annotated_url`.
+  - `analyze_access(building_id) -> dict` → {roof_access {value, short, conf}, edges [{id, side, px:[[x,y],[x,y]], latlng, len_m, conf, reason, verified}], staging {value, px, latlng, conf, verified} | null, entries [{n, type: dock_door|drive_in|rollup|entrance|exit, side, value, conf, cite {src: vexcel, id: oblique tile, bbox, img_w, img_h, url}, ortho_point {px, latlng, approx: true}}], entries_summary, base {view, tile_id, image_url, img_w, img_h}, annotated_url, oblique_annotated}. `px` = full-res pixels of `base.image_url` (ortho, or context when the footprint does not fit). 4 cached VLM calls (edges, staging, entries on the 4 obliques, verification). Adjacent nearly-collinear walls on the same side are merged; `edges` = at most 4 walls >= 10 m (best len_m x conf), `edges_all` = every accessible wall as analysed. `roof_access.value` is <= 2 sentences (<= 3 sides); the full per-wall text is in `roof_access.detail`. Plan: `access.roof_access.geometry` (type edges, plus `edges_all`), `access.staging.geometry` (type polygon), `access.entries[]`, `access.entries_summary`, `media.access_annotated_url`.
 - `tools/render.py`: `render_html(plan) -> path`, `render_pdf(plan) -> path`, `tts_brief(text) -> mp3 path` (macOS `say` → aiff→mp3 via ffmpeg fallback ok)
 - `tools/publish.py`: `publish_preplan(plan_id) -> dict` (HITL-gated in agent)
 
@@ -42,11 +42,12 @@ Static files: FastAPI mounts `agent/cache` at `/static/cache` and `agent/out` at
 
 ## HTTP API (FastAPI)
 - `GET  /buildings` → registry list
-- `POST /preplan {building_id}` → `{run_id}` (starts agent run in background)
+- `POST /preplan {building_id, mode?: "offline"|"agent", notify?: bool = true}` → `{run_id, mode, notify, stream_url}` (starts agent run in background). `notify: false` skips the Photon officer text (`notify_photon`) at the approval interrupt; use it for automated/test runs.
 - `GET  /stream/{run_id}` → SSE. Event `data:` JSON: `{"type": "todo|subagent_start|subagent_end|tool_call|tool_result|evidence|plan|interrupt|published|log|error|done", "ts": ..., "payload": {...}}`
 - `GET  /plan/{run_id}` → current plan JSON (schema = README §7) + `status`
 - `POST /approve/{run_id} {approved_by, edits?: {...}, decision: "approve"|"reject"}` → resumes interrupt
 - `GET  /incab/active` → latest APPROVED plan summary: `{plan_id, address, stories, year_built, construction, top_hazards[3], stairs, roof_access, voice_brief, audio_url, approved_at}`
+  - `construction` is CoStar's construction/material only, else `VERIFY ON SITE` (never inferred from year built). `top_hazards` are DISTINCT: same-type hazards from several tenants are merged into one item (combined location, `basis: "tenants A, B"`, every tenant cite kept in `cite.from`).
 - `POST /ask {plan_id, question}` → `{answer}` answered ONLY from approved plan (voice Q&A)
 
 ## Plan schema

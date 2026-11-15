@@ -75,3 +75,19 @@ Fill this in yourself. Format:
 discord_username1 - Full Name
 discord_username2 - Full Name
 ```
+
+---
+
+## What Main HackPrinceton Track are you submitted for? (dropdown)
+
+```
+Healthcare
+```
+
+Healthcare covers public safety and emergency response: firefighter line-of-duty deaths and civilian fire deaths are public-health outcomes, and it scores on the Charity criterion. If an organizer told you emergency response doesn't count as Healthcare, pick **Business and Enterprise** instead. You can only pick one.
+
+---
+
+## What fraction of your team are rookies? (dropdown)
+
+Pick the option that matches your team. "Rookie" usually means this is someone's first hackathon. Count teammates at their first hackathon and divide by team size (e.g. 1 of 3 = about a third). Only you know this.

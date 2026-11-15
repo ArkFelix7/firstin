@@ -1,0 +1,27 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.next/
+agent/cache/*.secret*
+agent/out/
+.DS_Store
+co-star-creds.md
+
+# Sponsor data (CoStar/Vexcel/Matterport): keep out of the public repo.
+# Regenerate locally with the scripts in agent/scripts/ and your own keys.
+agent/cache/matterport/**
+!agent/cache/matterport/*.md
+agent/cache/vexcel/**
+!agent/cache/vexcel/*.md
+agent/cache/vision/
+agent/cache/replay/
+agent/cache/buildings.json
+agent/cache/buildings_index.json
+agent/data/matterport_index.json
+web/public/mock/
+demo/screens/
+demo/screens-v2/

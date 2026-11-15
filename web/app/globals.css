@@ -1,0 +1,202 @@
+@import "tailwindcss";
+
+/*
+ * FirstIn design tokens. See DESIGN.md.
+ * Two themes share one token set: light (officer desk tools: /, /plan) and
+ * dark (in-cab MDT: /incab, opt in with data-theme="dark").
+ * Utilities map to these variables, so components never hard-code colors.
+ */
+
+:root {
+  /* Surfaces */
+  --canvas: #f4f5f7; /* app background behind panels and documents */
+  --surface: #ffffff; /* panels, document, tables */
+  --subtle: #f7f8f9; /* table headers, hover */
+  --muted: #eceef1; /* placeholders, pressed */
+  --line: #e3e6ea; /* hairlines between rows */
+  --line-strong: #cdd2d8; /* panel edges, inputs */
+
+  /* Text */
+  --fg: #16191d;
+  --fg-2: #4a525c;
+  --fg-3: #737c87;
+  --fg-4: #9aa2ab;
+
+  /* Single brand accent: ink blue. Used for primary action, selection, focus, links. */
+  --accent: #2554c7;
+  --accent-hover: #1d46ab;
+  --accent-subtle: #edf2fc;
+  --accent-line: #b9c9ef;
+  --on-accent: #ffffff;
+
+  /* Status (desaturated, status only) */
+  --ok: #2c7a50;
+  --ok-subtle: #ebf5ef;
+  --warn: #9a5b06;
+  --warn-subtle: #fbf3e4;
+  --warn-line: #ecd3a6;
+  --danger: #b0352e;
+  --danger-subtle: #fbeeed;
+  --danger-line: #eec3c0;
+
+  /* Source attribution glyph tints (muted; never used as fills or borders) */
+  --src-costar: #4867a8;
+  --src-vexcel: #2f7f86;
+  --src-matterport: #7558a6;
+  --src-inference: #7f7462;
+  --src-officer: #2c7a50;
+
+  --focus: 0 0 0 2px #ffffff, 0 0 0 4px #2554c7;
+  --elev-1: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --elev-2: 0 4px 12px rgba(16, 24, 40, 0.08), 0 1px 3px rgba(16, 24, 40, 0.06);
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --canvas: #0b0d10;
+  --surface: #121519;
+  --subtle: #171b20;
+  --muted: #1f242a;
+  --line: #262b32;
+  --line-strong: #353c45;
+
+  --fg: #f3f5f7;
+  --fg-2: #c3c9d0;
+  --fg-3: #8d959f;
+  --fg-4: #646c76;
+
+  --accent: #3b6ee0;
+  --accent-hover: #4a7be6;
+  --accent-subtle: #17223a;
+  --accent-line: #2c4680;
+  --on-accent: #ffffff;
+
+  --ok: #5fb985;
+  --ok-subtle: #12261b;
+  --warn: #e0a54a;
+  --warn-subtle: #2a2011;
+  --warn-line: #5a4320;
+  --danger: #e26a62;
+  --danger-subtle: #2b1514;
+  --danger-line: #5c2a27;
+
+  --src-costar: #8aa4dc;
+  --src-vexcel: #6fb9bf;
+  --src-matterport: #ad95d6;
+  --src-inference: #b3a993;
+  --src-officer: #5fb985;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-subtle: var(--subtle);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-fg-4: var(--fg-4);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-line: var(--accent-line);
+  --color-on-accent: var(--on-accent);
+  --color-ok: var(--ok);
+  --color-ok-subtle: var(--ok-subtle);
+  --color-warn: var(--warn);
+  --color-warn-subtle: var(--warn-subtle);
+  --color-warn-line: var(--warn-line);
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-danger-line: var(--danger-line);
+  --color-src-costar: var(--src-costar);
+  --color-src-vexcel: var(--src-vexcel);
+  --color-src-matterport: var(--src-matterport);
+  --color-src-inference: var(--src-inference);
+  --color-src-officer: var(--src-officer);
+
+  --shadow-elev-1: var(--elev-1);
+  --shadow-elev-2: var(--elev-2);
+}
+
+/* Strict type scale (px): 11 / 12 / 13 / 14 / 16 / 20 / 24 / 32. 13 is body. */
+@theme {
+  --text-2xs: 11px;
+  --text-2xs--line-height: 16px;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 20px;
+  --text-base: 14px;
+  --text-base--line-height: 20px;
+  --text-lg: 16px;
+  --text-lg--line-height: 24px;
+  --text-xl: 20px;
+  --text-xl--line-height: 28px;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 32px;
+  --text-3xl: 32px;
+  --text-3xl--line-height: 40px;
+
+  --radius-sm: 3px;
+  --radius: 4px;
+  --radius-md: 6px;
+}
+
+html,
+body {
+  background: var(--canvas);
+  color: var(--fg);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 20px;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss03";
+}
+
+::selection {
+  background: var(--accent-line);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+/* MapLibre chrome, light */
+.maplibregl-ctrl-attrib {
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: var(--fg-2) !important;
+  font-size: 11px !important;
+  line-height: 16px !important;
+  padding: 2px 6px !important;
+  border-top-left-radius: 3px;
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--fg-2) !important;
+}
+.maplibregl-ctrl-group {
+  background: var(--surface) !important;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: 4px !important;
+  box-shadow: var(--elev-1) !important;
+}
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--line) !important;
+}

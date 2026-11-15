@@ -1,0 +1,8 @@
+# LXDE/Wayfire autostart entry: Chromium fullscreen on the /incab card.
+# Install: mkdir -p ~/.config/autostart && cp firstin-kiosk.desktop ~/.config/autostart/
+# Edit the IP to your laptop's LAN address.
+[Desktop Entry]
+Type=Application
+Name=FirstIn Kiosk
+Exec=sh -c 'sleep 8; chromium-browser --kiosk --noerrdialogs --disable-infobars --no-first-run --disable-session-crashed-bubble --autoplay-policy=no-user-gesture-required --check-for-update-interval=31536000 http://192.168.1.20:3000/incab'
+X-GNOME-Autostart-enabled=true

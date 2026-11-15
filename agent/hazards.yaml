@@ -1,0 +1,200 @@
+# FirstIn seed hazard rules (README §6). Deterministic; the hazard-reasoner LLM may
+# extend these but every inference must cite `from`.
+# tenant rules match on tenant name/use text (keywords, case-insensitive, word-ish),
+# NAICS prefixes, or SIC prefixes.
+tenant_rules:
+  - id: chlorine_oxidizers
+    hazard: "Chlorine / oxidizers"
+    keywords: [pool supply, pool & spa, pool and spa, pool chemical, chemical wholesale, chemical distribut, chlorine, swimming pool, water treatment chemical, janitorial supply]
+    naics: ["424690", "42469", "325180", "325181"]
+    sic: ["5169", "2812", "2819"]
+    conf: 0.75
+    tactics: "Do not apply water directly to oxidizer storage; consider hazmat response; SCBA mandatory."
+  - id: flammable_liquids_auto
+    hazard: "Flammable liquids, compressed gases"
+    keywords: [auto repair, automotive repair, auto body, body shop, collision, tire, muffler, transmission, oil change, lube, car care, auto service, mechanic]
+    naics: ["8111"]
+    sic: ["753", "7532", "7538", "7539"]
+    conf: 0.7
+    tactics: "Expect gasoline, oils, oxy-acetylene cylinders, vehicle lifts."
+  - id: restaurant_cooking
+    hazard: "Cooking oil, gas lines, hood systems"
+    keywords: [restaurant, cafe, café, kitchen, grill, bar & grill, pizza, diner, bakery, catering, food service, taqueria, bistro, eatery, coffee]
+    naics: ["7225", "7223", "311811"]
+    sic: ["5812", "5813"]
+    conf: 0.65
+    tactics: "Locate gas shutoff; hood suppression likely; grease duct extension."
+  - id: lithium_ion
+    hazard: "Lithium-ion battery thermal runaway"
+    keywords: [battery, batteries, e-bike, ebike, electric bike, scooter, solar, vape, cell phone, wireless, electronics, energy storage, ev charging]
+    naics: ["335911", "335912", "441228", "443142", "221114"]
+    sic: ["3691", "5065"]
+    conf: 0.7
+    tactics: "Reignition risk; toxic off-gassing; large water volumes; monitor for explosion."
+  - id: high_fire_load_charleston
+    hazard: "High fire load; possible solvents at loading dock (Charleston pattern)"
+    keywords: [warehouse, furniture, mattress, storage, distribution, logistics, upholstery, carpet, home furnishing, self storage]
+    naics: ["4231", "4421", "4931", "493110", "337"]
+    sic: ["4225", "5712", "5021", "4226"]
+    conf: 0.6
+    tactics: "Rapid fire spread potential; check dock for solvents/finishes; defensive posture if heavy involvement."
+  - id: datacenter_telecom
+    hazard: "Large battery banks (UPS), clean-agent suppression"
+    keywords: [data center, datacenter, colocation, telecom, telecommunications, wireless carrier, server, hosting, network operations, cloud]
+    naics: ["518210", "5171", "5172", "517"]
+    sic: ["4813", "7374"]
+    conf: 0.7
+    tactics: "Clean-agent discharge = oxygen-depleted atmosphere; UPS battery rooms; EPO switch."
+  - id: medical_oxygen
+    hazard: "Medical oxygen / compressed gases; non-ambulatory occupants"
+    keywords: [hospital, surgery center, surgical, dialysis, clinic, medical, dental, oxygen, urgent care, nursing]
+    naics: ["6211", "6212", "622", "623", "621492"]
+    sic: ["80"]
+    conf: 0.55
+    tactics: "Oxygen-enriched atmosphere; occupants may need assisted evacuation."
+  - id: lab_chemicals
+    hazard: "Laboratory chemicals / unknown reagents"
+    keywords: [laboratory, lab, biotech, research, pharmaceutical, pharma, chemical]
+    naics: ["5417", "3254"]
+    sic: ["8731", "2834"]
+    conf: 0.55
+    tactics: "Check NFPA 704 placards; possible flammables, corrosives, cryogens."
+  - id: dry_cleaner_paint
+    hazard: "Solvents (perchloroethylene / paint thinners)"
+    keywords: [dry clean, cleaners, paint, coatings, print shop, printing, nail salon]
+    naics: ["812320", "444120", "3231"]
+    sic: ["7216", "5231", "2752"]
+    conf: 0.55
+    tactics: "Solvent vapors; toxic products of combustion."
+  - id: cannabis_extraction
+    hazard: "Butane/CO2 extraction, grow-light electrical load"
+    keywords: [cannabis, dispensary, hemp, cbd, grow]
+    naics: ["111998"]
+    sic: []
+    conf: 0.5
+    tactics: "Possible butane/CO2 tanks, high electrical load, fortified doors."
+
+  # ---- CoStar-specific rows (costar.py builds tenant `use` as "<CoStar industry> (<space context>); <profile terms>").
+  # CoStar company records carry no NAICS/SIC, so these match CoStar industry labels + profile terms.
+  - id: costar_bar_taproom
+    hazard: "Bar/taproom: CO2/nitrogen cylinders for draft systems, cooking, alcohol storage"
+    keywords: [taproom, brewery, brewpub, craft beer, cocktail, bar & grill, beer hall, wine bar]
+    naics: ["722410", "312120"]
+    sic: ["5813", "2082"]
+    conf: 0.6
+    tactics: "CO2 bulk tank/cylinders: asphyxiation risk in walk-in coolers and basements; locate gas shutoff; high evening occupant load."
+  - id: costar_robotics_ev
+    hazard: "Lithium-ion battery packs (robotics / EV development)"
+    keywords: [robotics, humanoid robot, electric vehicle, ev maker, drone]
+    naics: ["333998", "336111", "336320"]
+    sic: ["3569", "3711"]
+    conf: 0.5
+    tactics: "Battery packs and charging benches likely; thermal runaway, reignition and toxic off-gas; large water volumes."
+  - id: costar_industrial_manufacturing
+    hazard: "Manufacturing occupancy: combustible stock (textiles/plastics/foam), machinery, possible flammable liquids"
+    keywords: ["manufacturing (industrial space)", apparel, garment, textile, soap, plastics, foam, sewing]
+    naics: ["313", "314", "315", "3256", "326"]
+    sic: ["22", "23", "2841", "30"]
+    conf: 0.55
+    tactics: "Rapid fire spread in textile/plastic stock; check for solvents, dust and compressed gas; energized machinery."
+  - id: costar_industrial_wholesale
+    hazard: "Wholesale stock in industrial space: high fire load, palletized goods, possible aerosols"
+    keywords: ["retailers/wholesalers (industrial space)", "wholesaler (industrial space)", trucking, freight, "moving (industrial", grocers, "health and beauty"]
+    naics: ["424", "423", "484", "4885"]
+    sic: ["50", "51", "42"]
+    conf: 0.55
+    tactics: "Expect rack/pallet storage and aerosol cans (health & beauty); trucks and fuel at docks; consider defensive posture if well involved."
+  - id: costar_assembly_worship
+    hazard: "Assembly occupancy (worship): high transient occupant load, open flame (candles)"
+    keywords: [synagogue, synogogue, church, congregation, worship, mosque, temple, chapel]
+    naics: ["8131"]
+    sic: ["8661"]
+    conf: 0.5
+    tactics: "Occupant load peaks during services (evenings, weekends, holidays); prioritize primary search and egress."
+  - id: costar_children
+    hazard: "Children present (non-self-evacuating occupants)"
+    keywords: [daycare, day care, child care, childcare, preschool, kids, montessori, learning center]
+    naics: ["6244", "6111"]
+    sic: ["8351"]
+    conf: 0.5
+    tactics: "Children need assisted evacuation; confirm headcount with staff; prioritize search of these suites."
+  - id: costar_coworking
+    hazard: "Coworking floor: variable, high occupant load of transient occupants unfamiliar with exits"
+    keywords: [industrious, coworking, co-working, wework, regus, workspaces, commondesk, executive suites]
+    naics: ["531120"]
+    sic: []
+    conf: 0.45
+    tactics: "Occupant count not reflected in tenant employee data; expect more people than listed; sweep conference/phone rooms."
+
+era_rules:
+  - id: era_asbestos
+    hazard: "Possible asbestos-containing materials; verify construction type"
+    year_min: 1950
+    year_max: 1980
+    conf: 0.6
+    tactics: "Overhaul with SCBA; decon gear."
+  - id: era_lightweight
+    hazard: "Possible lightweight engineered wood/truss construction"
+    year_min: 1980
+    year_max: 2100
+    conf: 0.45
+    tactics: "Lightweight components fail early under fire; confirm on site."
+  - id: era_unreinforced
+    hazard: "Possible unreinforced masonry / ordinary construction; collapse zone"
+    year_min: 1800
+    year_max: 1940
+    conf: 0.5
+    tactics: "Establish collapse zones; parapet failure risk."
+
+  - id: costar_era_prewar
+    hazard: "Pre-1950 construction: possible unreinforced masonry, asbestos, concealed voids from renovations"
+    year_min: 1940
+    year_max: 1950
+    conf: 0.5
+    tactics: "Establish collapse zones; check for parapets and void spaces; overhaul with SCBA."
+
+roof_rules:
+  - id: roof_truss_collapse
+    hazard: "Early roof collapse risk (lightweight truss roof)"
+    keywords: [truss, bowstring, lightweight, barrel, metal deck, steel deck, open web, joist]
+    conf: 0.6
+    tactics: "No roof operations without confirmed structure; watch for sag."
+  - id: roof_solar
+    hazard: "Rooftop solar array (energized PV, added dead load)"
+    keywords: [solar, photovoltaic, pv panel, pv array]
+    conf: 0.7
+    tactics: "PV stays energized in daylight; avoid cutting through arrays."
+  - id: roof_structural_defect
+    hazard: "Roof structural damage / ponding noted from aerial (reduced load capacity)"
+    keywords: [structural damage, water pooling, ponding]
+    conf: 0.5
+    tactics: "Assume compromised roof; avoid roof ops over damaged sections."
+
+  - id: costar_tilt_up
+    hazard: "Concrete tilt-up walls: panels can fall outward when the roof diaphragm fails"
+    keywords: [tilt-up, tilt up, tilt_up]
+    conf: 0.6
+    tactics: "Collapse zone = 1.5x wall height on all sides; roof failure can release wall panels."
+
+# Interior rules match text the interior analyst's VLM reported from Matterport panoramas.
+interior_rules:
+  - id: interior_truss_roof
+    hazard: "Exposed truss / arched roof structure (early collapse risk)"
+    keywords: [truss, bowstring, arched roof, arch roof, open web, bar joist, wood joist, glulam]
+    conf: 0.65
+    tactics: "No roof ops without confirmed structure; collapse zone 1.5x height; watch for sag."
+  - id: interior_fire_load
+    hazard: "High fire load: palletized / rack storage"
+    keywords: [pallet, palletized, rack storage, racking, high-pile, high pile, stacked boxes, cardboard, storage racks]
+    conf: 0.65
+    tactics: "Rapid fire growth; rack collapse; plan for defensive operations if well involved."
+  - id: interior_haz_storage
+    hazard: "Hazardous material containers observed"
+    keywords: [drum, drums, chemical container, gas cylinder, propane, compressed gas, flammable cabinet, jerry can, solvent]
+    conf: 0.6
+    tactics: "Identify contents; NFPA 704 placards; hazmat if leaking."
+  - id: interior_mezzanine
+    hazard: "Mezzanine / open-grate steel stairs (fall + rapid heat exposure)"
+    keywords: [mezzanine, steel stair, metal stair, open grate]
+    conf: 0.5
+    tactics: "Unprotected steel fails early; mezzanine collapse risk."

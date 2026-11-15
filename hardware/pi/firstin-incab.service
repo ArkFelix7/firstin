@@ -1,0 +1,18 @@
+# systemd user service: runs incab.py (GPIO + audio) at login.
+# Install:  mkdir -p ~/.config/systemd/user && cp firstin-incab.service ~/.config/systemd/user/
+#           edit FIRSTIN_BACKEND below, then:
+#           systemctl --user daemon-reload && systemctl --user enable --now firstin-incab
+#           loginctl enable-linger $USER    # start without a login shell
+[Unit]
+Description=FirstIn in-cab unit
+After=network-online.target sound.target
+
+[Service]
+Environment=FIRSTIN_BACKEND=http://192.168.1.20:8000
+Environment=FIRSTIN_WEB=http://192.168.1.20:3000
+ExecStart=/usr/bin/python3 %h/firstin/hardware/incab.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

@@ -18,7 +18,7 @@ An officer picks one of 3,288 indexed buildings in Houston or Los Angeles. About
 - **Models:** Claude Sonnet 5.5 for planning and for vision on Vexcel orthos and obliques, and on Matterport panoramas we stitched from six-face skyboxes.
 - **Data:** the CoStar hackathon kit (property, occupancy and company records), **Vexcel API v2** (ortho and oblique imagery, AI roof attributes, surface and terrain elevation), and **Matterport GraphQL** (floors, rooms, sweeps, skyboxes). CoStar's Matterport model IDs tie all three to the same building.
 - **Access geometry:** ladder-access walls come straight from Vexcel's measured footprint. The model only decides which walls are reachable. Code proposes staging rectangles and rejects any that overlap the building. Doors found in oblique photos are projected back onto the footprint. A second vision pass checks every drawn element and drops what fails.
-- **Cross-checks:** when two sources measure the same thing, we compare them. At 10940 Wilshire, CoStar gives $24 \text{ floors} \times 12\text{ ft} = 87.8\text{ m}$ and Vexcel's elevation model gives $87.2\text{ m}$, an agreement of $1 - \frac{|87.8 - 87.2|}{87.8} \approx 99\%$.
+- **Cross-checks:** when two sources measure the same thing, we compare them. At 10940 Wilshire, CoStar gives 24 floors × 12 ft = 87.8 m and Vexcel's elevation model gives 87.2 m, about 99% agreement.
 - **App:** FastAPI with Server-Sent Events for the live agent trace; a Next.js dashboard with MapLibre and photo-sphere-viewer; reportlab for the one-page PDF; a **Photon v2** iMessage bridge for approval and questions; and an in-cab view designed like a fire-truck terminal.
 
 ## Challenges we ran into

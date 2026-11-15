@@ -1,15 +1,45 @@
-01-la-002-03-awaiting-approval.jpg	A cited pre-plan, ready for officer approval. Every field names its source (CoStar, Vexcel, Matterport) or says Verify on site. 1601 Perrino Pl, Los Angeles.
-02-la-002-01-home.jpg	Pick any of 3,288 buildings in Houston and LA. Clustered map of the indexed CoStar buildings; prepared buildings are ready in about 30 seconds.
-03-la-002-02-plan-running.jpg	A deepagents planner with three analysts in parallel. Live trace: NFPA 1660 to-dos, subagents, tool calls and evidence files as they arrive.
-04-la-002-04-evidence-matterport-360.jpg	Interior evidence from Matterport 360° scans. The vision model found the stair in the panorama; the box shows where.
-05-la-002-05-evidence-vexcel.jpg	Roof and surroundings from Vexcel aerial imagery. Click any fact to open the tile it came from.
-06-la-002-11-access-plan.jpg	Access plan from the measured footprint. Ladder walls, a validated staging area and doors found in the angled aerial photos.
-07-la-002-12-access-entry-oblique.jpg	Doors found in oblique aerial photos. Each entry links back to the oblique image and the spot where it was seen.
-08-la-002-06-evidence-hazard.jpg	Hazards with the facts they came from. Rule table plus model reasoning; each hazard cites the tenant or construction record behind it.
-09-la-002-07-verify-on-site.jpg	Nothing is guessed. Fields with no source are marked Verify on site instead of filled in.
-10-la-002-08-edit-mode.jpg	The officer edits before approving. Edits are saved as officer-cited facts; the agent's publish call waits for this decision.
-11-combined-real.jpg	Approve or ask by iMessage (Photon). Real screenshots: an approval request, and a question answered only from the plan.
-12-la-002-10-incab.jpg	In-cab display with a 20-second spoken brief. Top hazards, stairs and roof access. Brief me plays the voice brief; crews can ask questions.
-13-la-003-11-access-high-rise.jpg	Works on high-rises too. At about 87 m the roof is beyond aerial ladder reach, so the plan says so first: use interior stairs. Green walls are apparatus set-up positions.
-14-hou-001-09-published.jpg	Published: PDF, voice brief and in-cab. Approval renders the one-page sheet and audio and pushes the plan to the engine.
-15-collage-timeline.jpg	Why: missing building information keeps showing up in fire investigations. News and investigation headlines with attribution (sources in demo/press/SOURCES.md).
+01-la-002-03-awaiting-approval.jpg
+A cited NFPA 1660 pre-plan in about 30 seconds. Every field names its source or says Verify on site. Nothing ships without an officer.
+
+02-la-002-01-home.jpg
+Pick any of 3,288 buildings in Houston and LA. CoStar, Vexcel and Matterport data, linked for the same address.
+
+03-la-002-02-plan-running.jpg
+Live agent trace: a deepagents planner splits the job into NFPA sections and runs three analysts in parallel.
+
+04-la-002-04-evidence-matterport-360.jpg
+Interior from Matterport: the vision model found the stair in a 360° scan, and the box shows exactly where.
+
+05-la-002-05-evidence-vexcel.jpg
+Roof and surroundings from Vexcel aerial imagery. Click any fact to open the tile it came from.
+
+06-la-002-11-access-plan.jpg
+Access plan on the measured footprint: walls a ladder truck can reach, a checked staging area, and numbered doors.
+
+07-la-002-12-access-entry-oblique.jpg
+Doors found in angled aerial photos, cross-checked against CoStar's dock count. Each links to where it was seen.
+
+08-la-002-06-evidence-hazard.jpg
+Hazards ranked with tactics, each showing the cited facts it came from: tenants, construction, roof, interior.
+
+09-la-002-07-verify-on-site.jpg
+No guessing. Fields with no source become Verify on site and form the officer's walk-through checklist.
+
+10-la-002-08-edit-mode.jpg
+The officer can correct any field before approving. Edited values are cited to the officer.
+
+11-combined-real.jpg
+Real iMessages via Photon: the officer gets the approval request, asks where the exit is, and approves from the phone.
+
+12-la-002-10-incab.jpg
+Engine 12's in-cab screen: top hazards, stairs and roof access. Brief me plays a 20-second spoken brief en route.
+
+13-la-003-11-access-high-rise.jpg
+High-rises too: at 87 m the roof is beyond ladder reach, so the plan says use interior stairs and marks apparatus spots.
+
+14-hou-001-09-published.jpg
+Approved and published: a one-page PDF, a voice brief, and the plan pushed to the engine's in-cab unit.
+
+15-collage-timeline.jpg
+Why we built it: from Charleston 2007 to Durham 2026, investigations keep naming missing building information.
+

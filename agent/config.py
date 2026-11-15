@@ -59,6 +59,16 @@ def unit_name() -> str:
     return os.environ.get("FIRSTIN_UNIT", "Engine 12")
 
 
+def cors_origins() -> list[str]:
+    """Extra CORS origins (hosted dashboard), comma-separated. Extends the localhost defaults."""
+    return [o.strip().rstrip("/") for o in os.environ.get("FIRSTIN_CORS_ORIGINS", "").split(",") if o.strip()]
+
+
+def public_api_url() -> str | None:
+    """Public origin of this API (e.g. https://api.example.com) for absolute audio/pdf/html URLs."""
+    return (os.environ.get("FIRSTIN_PUBLIC_API_URL") or "").strip().rstrip("/") or None
+
+
 def static_url(path: str | Path | None) -> str | None:
     """Map a local file under agent/cache or agent/out to its served URL."""
     if not path:

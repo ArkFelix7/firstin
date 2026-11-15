@@ -59,10 +59,16 @@ function fmtHazard(h: Hazard): string {
   return parts.length ? parts.join(" — ") : JSON.stringify(h);
 }
 
+/** BACKEND_ACCESS_CODE = the backend's FIRSTIN_ACCESS_CODE (hosted mode). Unset = no header. */
+function backendAuthHeader(): Record<string, string> {
+  const code = process.env.BACKEND_ACCESS_CODE?.trim();
+  return code ? { authorization: `Bearer ${code}` } : {};
+}
+
 async function http(method: string, url: string, body?: unknown, timeoutMs = 60_000): Promise<any> {
   const res = await fetch(url, {
     method,
-    headers: body ? { "content-type": "application/json" } : undefined,
+    headers: { ...(body ? { "content-type": "application/json" } : {}), ...backendAuthHeader() },
     body: body ? JSON.stringify(body) : undefined,
     signal: AbortSignal.timeout(timeoutMs),
   });

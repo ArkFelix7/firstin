@@ -3,6 +3,7 @@
 // Every call degrades to null; the panel just shows fewer rows.
 
 import { apiBase, assetUrl, getMode } from "./api";
+import { authHeaders } from "./auth";
 import type { Building } from "./types";
 
 export interface BuildingFacts {
@@ -31,7 +32,7 @@ export interface RunSummary {
 
 async function getJson<T>(path: string): Promise<T | null> {
   try {
-    const r = await fetch(`${apiBase()}${path}`, { cache: "no-store", signal: AbortSignal.timeout(3000) });
+    const r = await fetch(`${apiBase()}${path}`, { cache: "no-store", signal: AbortSignal.timeout(3000), headers: authHeaders() });
     return r.ok ? ((await r.json()) as T) : null;
   } catch {
     return null;
@@ -48,7 +49,7 @@ export async function getBuildingFacts(b: Building): Promise<BuildingFacts | nul
     getJson<Record<string, unknown>>(`/static/cache/costar/${id}.json`),
     getJson<Record<string, unknown>>(`/static/cache/vexcel/${id}/ortho.json`),
     getJson<{ models?: Array<Record<string, unknown>> }>(`/static/cache/matterport/${id}/model.json`),
-    fetch(`${apiBase()}${accessPath}`, { method: "HEAD", cache: "no-store", signal: AbortSignal.timeout(3000) })
+    fetch(`${apiBase()}${accessPath}`, { method: "HEAD", cache: "no-store", signal: AbortSignal.timeout(3000), headers: authHeaders() })
       .then((r) => r.ok)
       .catch(() => false),
   ]);
@@ -110,7 +111,7 @@ export async function searchBuildings(all: Building[], q: string, city: string |
     try {
       const params = new URLSearchParams({ q, limit: String(limit) });
       if (city) params.set("city", city);
-      const r = await fetch(`${apiBase()}/buildings/search?${params}`, { cache: "no-store", signal: AbortSignal.timeout(2500) });
+      const r = await fetch(`${apiBase()}/buildings/search?${params}`, { cache: "no-store", signal: AbortSignal.timeout(2500), headers: authHeaders() });
       if (r.ok) {
         serverSearch = true;
         const d = (await r.json()) as { total?: number; items?: Building[] };

@@ -1,6 +1,7 @@
 // HTTP/SSE client for the FastAPI agent server (CONTRACTS.md), with automatic
 // fallback to the in-browser mock when the server is unreachable.
 
+import { authHeaders, getToken, remoteApi } from "./auth";
 import * as mock from "./mock";
 import type { AgentEvent, ApproveBody, Building, IncabSummary, Plan } from "./types";
 
@@ -14,6 +15,13 @@ export function apiBase(): string {
   if (env) return env.replace(/\/$/, "");
   if (typeof window !== "undefined") return `${window.location.protocol}//${window.location.hostname}:8000`;
   return "http://localhost:8000";
+}
+
+/** Append ?key=<access code> to API URLs that can't carry headers (EventSource, <audio>, <img>). */
+export function withKey(url: string): string {
+  const t = getToken();
+  if (!t || !url.startsWith(apiBase())) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}key=${encodeURIComponent(t)}`;
 }
 
 export type Mode = "live" | "mock";
@@ -35,7 +43,9 @@ export function getMode(): Promise<Mode> {
   const forced = forcedMode();
   if (forced) return Promise.resolve(forced);
   if (!modePromise) {
-    modePromise = fetch(`${apiBase()}/buildings`, { signal: AbortSignal.timeout(1500), cache: "no-store" })
+    // a hosted API is further away than localhost: allow more time before falling back to mock
+    const timeout = remoteApi() ? 8000 : 1500;
+    modePromise = fetch(`${apiBase()}/buildings`, { signal: AbortSignal.timeout(timeout), cache: "no-store", headers: authHeaders() })
       .then((r) => (r.ok ? "live" : "mock") as Mode)
       .catch(() => "mock" as Mode);
   }
@@ -47,15 +57,21 @@ export const isMockRun = (runId: string) => runId.startsWith("mock-");
 /** Resolve backend-relative asset paths (/static/...) against the API origin. */
 export function assetUrl(u: unknown): string | null {
   if (typeof u !== "string" || !u) return null;
-  if (/^(https?:|data:|blob:)/.test(u) || u.startsWith("/mock/")) return u;
-  return `${apiBase()}${u.startsWith("/") ? "" : "/"}${u}`;
+  if (/^(data:|blob:)/.test(u) || u.startsWith("/mock/")) return u;
+  if (/^https?:/.test(u)) {
+    // Hosted: absolute backend file URLs (audio/pdf from /incab/active) go through the configured
+    // API origin, so the access code is attached even if the server reported another host.
+    const p = remoteApi() ? new URL(u).pathname : "";
+    return withKey(p.startsWith("/static/") ? `${apiBase()}${p}` : u);
+  }
+  return withKey(`${apiBase()}${u.startsWith("/") ? "" : "/"}${u}`);
 }
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`${apiBase()}${path}`, {
     cache: "no-store",
     ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: { "Content-Type": "application/json", ...authHeaders(), ...(init?.headers ?? {}) },
   });
   if (!r.ok) throw new Error(`${init?.method ?? "GET"} ${path} → ${r.status}`);
   return (await r.json()) as T;
@@ -124,7 +140,7 @@ export function streamRun(runId: string, h: StreamHandlers): () => void {
     return mock.mockSubscribe(runId, h.onEvent);
   }
   h.onStatus?.("connecting");
-  const es = new EventSource(`${apiBase()}/stream/${encodeURIComponent(runId)}`);
+  const es = new EventSource(withKey(`${apiBase()}/stream/${encodeURIComponent(runId)}`));
   const seen = new Set<string>(); // de-dupe if the server replays history on reconnect
   let finished = false;
 
@@ -175,7 +191,7 @@ export async function approve(runId: string, body: ApproveBody): Promise<void> {
 export async function getIncab(): Promise<{ mode: Mode; summary: IncabSummary | null }> {
   const mode = await getMode();
   if (mode === "mock") return { mode, summary: mock.mockIncab() };
-  const r = await fetch(`${apiBase()}/incab/active`, { cache: "no-store", signal: AbortSignal.timeout(3000) });
+  const r = await fetch(`${apiBase()}/incab/active`, { cache: "no-store", signal: AbortSignal.timeout(3000), headers: authHeaders() });
   if (r.status === 404 || r.status === 204) return { mode, summary: null };
   if (!r.ok) throw new Error(`incab ${r.status}`);
   const data = (await r.json()) as IncabSummary | null | Record<string, never>;

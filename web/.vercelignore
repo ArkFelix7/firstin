@@ -1,0 +1,4 @@
+public/mock/
+.next/
+node_modules/
+.env*

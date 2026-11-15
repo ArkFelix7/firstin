@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -270,40 +271,106 @@ def _build_pdf(plan: dict, L: int, H: int, one_page: bool) -> str | None:
     return str(path)
 
 
-def tts_brief(text: str, out_path: str | None = None) -> str | None:
-    """Speak `text` to an audio file. macOS `say` -> aiff -> mp3 (ffmpeg/lame) or m4a (afconvert)."""
-    out = Path(out_path) if out_path else config.OUT_DIR / "brief.mp3"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    aiff = out.with_suffix(".aiff")
-    say = shutil.which("say")
-    if not say:
-        return None
+def _tts_text(text: str) -> str:
     import re as _re
 
     text = _re.sub(r"\bFDC\b", "F D C", text, flags=_re.I)
-    text = text.replace("/", " or ").replace("\u2014", ",").replace("…", "")
-    voice = []
-    v = __import__("os").environ.get("FIRSTIN_VOICE")
-    if v:
-        voice = ["-v", v]
-    try:
-        subprocess.run([say, *voice, "-r", "195", "-o", str(aiff), text], check=True, timeout=60,
-                       capture_output=True)
-        if shutil.which("ffmpeg"):
-            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(aiff), "-codec:a", "libmp3lame", "-q:a", "4",
-                            str(out.with_suffix(".mp3"))], check=True, timeout=60, capture_output=True)
-            final = out.with_suffix(".mp3")
-        elif shutil.which("lame"):
-            subprocess.run(["lame", "--quiet", str(aiff), str(out.with_suffix(".mp3"))], check=True, timeout=60)
-            final = out.with_suffix(".mp3")
-        else:
-            subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", str(aiff), str(out.with_suffix(".m4a"))], check=True,
-                           timeout=60)
-            final = out.with_suffix(".m4a")
-        aiff.unlink(missing_ok=True)
-        return str(final)
-    except Exception:  # noqa: BLE001
-        return str(aiff) if aiff.exists() else None
+    return text.replace("/", " or ").replace("\u2014", ",").replace("\u2026", "")
+
+
+def _run(cmd: list[str], **kw) -> None:
+    subprocess.run(cmd, check=True, timeout=60, capture_output=True, **kw)
+
+
+def _to_mp3(src: Path, out: Path) -> Path:
+    """src (aiff/wav) -> mp3 via ffmpeg or lame; m4a via afconvert (macOS); else keep src."""
+    mp3 = out.with_suffix(".mp3")
+    if shutil.which("ffmpeg"):
+        _run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-codec:a", "libmp3lame", "-q:a", "4", str(mp3)])
+        return mp3
+    if shutil.which("lame"):
+        _run(["lame", "--quiet", str(src), str(mp3)])
+        return mp3
+    if shutil.which("afconvert"):
+        m4a = out.with_suffix(".m4a")
+        _run(["afconvert", "-f", "m4af", "-d", "aac", str(src), str(m4a)])
+        return m4a
+    return src
+
+
+def _tts_say(text: str, out: Path) -> Path | None:
+    say = shutil.which("say")
+    if not say:
+        return None
+    aiff = out.with_suffix(".aiff")
+    v = os.environ.get("FIRSTIN_VOICE")
+    _run([say, *(["-v", v] if v else []), "-r", "195", "-o", str(aiff), text])
+    return aiff
+
+
+def _tts_piper(text: str, out: Path) -> Path | None:
+    exe, model = shutil.which("piper"), os.environ.get("PIPER_MODEL", "")
+    if not exe or not model or not Path(model).exists():
+        return None
+    wav = out.with_suffix(".wav")
+    _run([exe, "-m", model, "-f", str(wav)], input=text.encode())
+    return wav
+
+
+def _tts_espeak(text: str, out: Path) -> Path | None:
+    exe = shutil.which("espeak-ng") or shutil.which("espeak")
+    if not exe:
+        return None
+    wav = out.with_suffix(".wav")
+    _run([exe, "-v", os.environ.get("FIRSTIN_ESPEAK_VOICE", "en-us"), "-s", "165", "-w", str(wav), text])
+    return wav
+
+
+def _tts_pico(text: str, out: Path) -> Path | None:
+    exe = shutil.which("pico2wave")
+    if not exe:
+        return None
+    wav = out.with_suffix(".wav")
+    _run([exe, "-l", "en-US", "-w", str(wav), text])
+    return wav
+
+
+TTS_ENGINES = (("say", _tts_say), ("piper", _tts_piper), ("espeak-ng", _tts_espeak), ("pico2wave", _tts_pico))
+
+
+def tts_brief(text: str, out_path: str | None = None) -> str | None:
+    """Speak `text` to an audio file (mp3 when ffmpeg/lame exist).
+
+    Engine chain: macOS `say` -> `piper` (env PIPER_MODEL) -> `espeak-ng` -> `pico2wave`.
+    If every engine fails, an already rendered brief at the target path is kept.
+    """
+    out = Path(out_path) if out_path else config.OUT_DIR / "brief.mp3"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    text = _tts_text(text)
+    for name, engine in TTS_ENGINES:
+        raw: Path | None = None
+        try:
+            raw = engine(text, out)
+            if not raw or not raw.exists():
+                continue
+            final = _to_mp3(raw, out)
+            if final != raw:
+                raw.unlink(missing_ok=True)
+            print(f"[tts] engine={name} -> {final.name}", flush=True)
+            log.info("tts_brief: engine=%s file=%s", name, final)
+            return str(final)
+        except Exception as e:  # noqa: BLE001
+            log.warning("tts_brief: %s failed: %s", name, e)
+            if raw is not None and raw.exists():
+                print(f"[tts] engine={name} (unconverted) -> {raw.name}", flush=True)
+                return str(raw)
+    for ext in (".mp3", ".m4a", ".wav"):
+        pre = out.with_suffix(ext)
+        if pre.exists() and pre.stat().st_size > 0:
+            print(f"[tts] no engine worked; keeping pre-rendered {pre.name}", flush=True)
+            return str(pre)
+    print("[tts] no TTS engine available (say/piper/espeak-ng/pico2wave); no audio brief", flush=True)
+    return None
 
 
 def write_json(plan: dict, name: str) -> str:

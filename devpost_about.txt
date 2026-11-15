@@ -1,0 +1,45 @@
+## Inspiration
+
+When a fire crew pulls up to a commercial building, they usually know almost nothing about what's inside. They don't know where the stairs are, whether there's a lithium-ion battery warehouse behind the roll-up door, whether the roof is a bowstring truss that can collapse early, or how many people are inside. Pre-incident plans exist to answer these questions, but departments write them by hand, few buildings have one, and most of those are years out of date.
+
+The 2007 Charleston Sofa Super Store fire killed nine firefighters in a furniture warehouse with a huge fire load. Fires like that are why hazard data matters. Meanwhile, the information that could have warned them already exists in commercial datasets: tenant records, aerial imagery and 3D interior scans. Nobody had put it in front of the person going through the door. So we asked: **what if any commercial building could have a current, cited pre-plan in under a minute?**
+
+## What it does
+
+FirstIn produces a firefighter pre-incident plan for any of **3,288 commercial buildings in Houston and Los Angeles**:
+
+- **CoStar** supplies the construction type, year built, stories, sprinklers, elevators and the current tenant roster. The tenants are what reveal hazards: restaurants (cooking oil, gas), auto shops (flammable liquids), pool suppliers (chlorine), battery importers (lithium-ion), furniture warehouses (high fire load).
+- **Vexcel** aerial imagery supplies roof material and condition, the footprint, building height from elevation data, neighboring buildings (exposures), and staging and access, viewed from overhead and all four oblique angles.
+- **Matterport** 3D scans supply the interior: stairs, utility rooms, storage, mezzanines and roof structure. Claude vision analyzes each panorama.
+
+**Every fact in the plan is cited** to its source record, image or scan, with a confidence score. If nothing supports a fact, the plan says `VERIFY ON SITE` instead of guessing. An officer reviews the plan and approves it; FirstIn texts them over **iMessage (Photon)** when a plan is ready. The approved plan then goes to an in-cab view with a spoken briefing and voice Q&A, answered only from the approved plan.
+
+## How we built it
+
+- **Agent:** a **LangChain deep agent** (`deepagents` + LangGraph) running Claude. A planner hands work to five specialist subagents: costar-analyst, aerial-analyst, interior-analyst, hazard-reasoner and validator. They share a virtual file system and a to-do list. A human-in-the-loop interrupt stops `publish_preplan` until an officer approves.
+- **Tools:** plain Python functions over each data source. Each one reads a local cache first and calls the live API on a cache miss, so a never-before-seen building generates live in about 50 seconds and a pre-cached demo building loads instantly.
+- **Hazards:** deterministic seed rules (YAML) match tenant names and industry codes against known hazard patterns. The LLM can add hazards, but each one must cite the evidence it came from.
+- **Backend / frontend:** a FastAPI server streams every agent step over SSE to a Next.js dashboard. That way you watch the subagents work, see each tool call, and see evidence appear on the map and in the panoramas.
+- **Geometry:** Vexcel orthos are Web Mercator, so we compute the georeference directly and draw cited footprints and exposures on the image. Height comes from the elevation model, not from a stories field:
+
+$$h = \mathrm{DSM}_{p90}(\text{footprint}) - \mathrm{DTM}(\text{ground}), \qquad \widehat{\text{stories}} \approx \frac{h}{3.8\,\text{m}}$$
+
+As a check, for a 24-story Westwood tower CoStar implies $24 \times 12\,\text{ft} \approx 87.8\,\text{m}$ and Vexcel measured $87.2\,\text{m}$.
+
+## Challenges we ran into
+
+- **Coordinates lie.** Census geocodes were 30-210 m off and sometimes landed on the neighboring building. Matterport's scan geolocation usually lands inside the right footprint, so we rank coordinate sources and allow manual overrides. Tall buildings also lean in the aerial image, and one tower's scan location landed on its parking podium. That gave us 13.5 m instead of 60 m until we fixed it.
+- **The data never lines up perfectly.** We joined three proprietary datasets on PropertyId and Matterport model id, deduplicated scans, and covered every commercial property that has a scan.
+- **Commercial scans are messy.** They usually cover one suite, not the whole building. They almost never have tags, and the automatic room labels are often wrong. We pick panoramas by fire relevance (stairs and utility rooms first) and let vision do the rest.
+- **Hallucination is unacceptable here.** A wrong stair location is worse than none. We built the citation contract, a validator subagent and the `VERIFY ON SITE` fallback so the model can't invent facts.
+- **Speed vs. coverage.** Fetching 20 Matterport scans cold took minutes, so we fetch the richest scans first, cap how many we pull, and pre-cache a curated demo set.
+
+## What we learned
+
+- Grounding beats fluency. The most valuable thing the LLM does is stay inside the evidence and say clearly what it doesn't know.
+- Deep agents with specialist subagents and a human approval gate fit safety-critical work well: parallel analysis, one accountable sign-off.
+- Imagery numbers need cross-checks. When CoStar's stories × floor height matched Vexcel's measured height, we could trust both.
+
+## What's next
+
+Expand beyond Houston and LA, sync approved plans into CAD and records management systems, and let crews add their own walk-through notes as new cited evidence.

@@ -1,0 +1,19 @@
+# FirstIn API behind HTTPS. Caddy gets a Let's Encrypt cert for the domain automatically.
+# FIRSTIN_DOMAIN comes from Caddy's environment (setup_server.sh writes a systemd drop-in),
+# e.g. 2.25.149.18.sslip.io or api.example.com (DNS A record -> the VPS).
+{$FIRSTIN_DOMAIN:firstin.example.com} {
+	# SSE (/stream/*) must not be compressed or buffered
+	@compressible not path /stream/*
+	encode @compressible zstd gzip
+
+	reverse_proxy 127.0.0.1:8100 {
+		flush_interval -1
+	}
+
+	log {
+		output file /var/log/caddy/firstin.log {
+			roll_size 20MiB
+			roll_keep 5
+		}
+	}
+}

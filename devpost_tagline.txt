@@ -1,0 +1,3 @@
+FirstIn: an AI deep agent that turns CoStar, Vexcel and Matterport data into a cited firefighter pre-incident plan in under a minute, then texts the officer to approve it.
+
+Know the building before you're through the door: cited, AI-generated pre-plans for any commercial building, approved by the officer over iMessage.

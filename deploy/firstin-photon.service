@@ -1,0 +1,21 @@
+[Unit]
+Description=FirstIn Photon iMessage bridge
+After=network-online.target firstin-api.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=firstin
+Group=firstin
+WorkingDirectory=/opt/firstin/photon
+# BACKEND_ACCESS_CODE, PHOTON_HOST=127.0.0.1, DASHBOARD_URL. photon/.env (Photon keys, OFFICER_PHONE) is read by the bridge.
+EnvironmentFile=/etc/firstin/firstin.env
+Environment=NODE_ENV=production
+ExecStart=/opt/firstin/photon/node_modules/.bin/tsx src/index.ts
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

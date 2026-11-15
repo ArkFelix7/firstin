@@ -7,6 +7,8 @@ os.environ["FIRSTIN_OFFLINE"] = "1"
 os.environ["FIRSTIN_PACE"] = "0"
 os.environ["PHOTON_URL"] = "off"
 os.environ["FIRSTIN_SAVE_REPLAY"] = "0"
+# hosted-mode auth off for the suite even if .env sets it (test_auth.py turns it on per test)
+os.environ["FIRSTIN_ACCESS_CODE"] = ""
 
 
 @pytest.fixture()

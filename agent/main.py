@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from . import config
+from .auth import AccessCodeMiddleware
 from .plan_builder import no_dash, stairs_text, top_hazards
 from .runs import RUNS, Run, new_run
 from .tools import publish as publish_mod
@@ -25,9 +26,12 @@ from .tools.render import cite_str
 from .tools.validator import VERIFY
 
 app = FastAPI(title="FirstIn agent server", version="0.1")
+# Auth first so CORS (added after = outermost) still answers preflights and decorates 401s.
+# No-op unless FIRSTIN_ACCESS_CODE is set (agent/auth.py).
+app.add_middleware(AccessCodeMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", *config.cors_origins()],
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?",
     allow_methods=["*"],
     allow_headers=["*"],
@@ -203,7 +207,8 @@ async def approve(run_id: str, req: ApproveReq):
 def _abs(request: Request, url: str | None) -> str | None:
     if not url or url.startswith("http"):
         return url
-    return str(request.base_url).rstrip("/") + url
+    base = config.public_api_url() or str(request.base_url)
+    return base.rstrip("/") + url
 
 
 @app.get("/incab/active")

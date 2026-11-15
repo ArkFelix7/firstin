@@ -221,7 +221,7 @@ cd web && pnpm install && pnpm dev            # dashboard on :3000
 cd photon && npm install && npm start         # optional: iMessage approval on :8010
 ```
 
-Open http://localhost:3000, pick a building and generate a pre-plan. The in-cab view is http://localhost:3000/incab.
+Open http://localhost:3000, pick a building and generate a pre-plan. Hosting (VPS + Caddy for the API, Vercel for the dashboard, shared access code): [deploy/DEPLOY.md](deploy/DEPLOY.md). The in-cab view is http://localhost:3000/incab.
 
 | Command | What it does |
 |---|---|

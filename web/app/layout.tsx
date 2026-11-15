@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Inter } from "next/font/google";
+import { AccessGate } from "@/components/AccessGate";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -17,7 +18,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${plexMono.variable} h-full`}>
-      <body className="h-full bg-canvas text-fg">{children}</body>
+      <body className="h-full bg-canvas text-fg">
+        <AccessGate>{children}</AccessGate>
+      </body>
     </html>
   );
 }

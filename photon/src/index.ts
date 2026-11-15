@@ -110,8 +110,10 @@ try {
 }
 await bridge.syncFromBackend(); // restore pending runs after a restart
 setInterval(() => void bridge.syncFromBackend(), 30_000).unref();
-server.listen(port, () => {
-  console.log(`[photon] FirstIn bridge on http://localhost:${port} (transport=${transport.name}, backend=${process.env.BACKEND_URL ?? "http://localhost:8000"})`);
+// PHOTON_HOST=127.0.0.1 on the server keeps the bridge private (only the backend calls it). Unset = all interfaces.
+const host = process.env.PHOTON_HOST || undefined;
+server.listen(port, host, () => {
+  console.log(`[photon] FirstIn bridge on http://${host ?? "localhost"}:${port} (transport=${transport.name}, backend=${process.env.BACKEND_URL ?? "http://localhost:8000"})`);
 });
 
 const shutdown = async () => {
